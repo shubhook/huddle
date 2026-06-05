@@ -1,0 +1,98 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                     String          @id @default(cuid())
+  username               String          @unique
+  email                  String          @unique
+  hashedPassword         String?
+  createdAt              DateTime        @default(now())
+
+  workspaces             WorkspaceMember[]
+  channels               ChannelMember[]
+  messages               Message[]
+  sentDirectMessages     DirectMessage[] @relation("SentDMs")
+  receivedDirectMessages DirectMessage[] @relation("ReceivedDMs")
+}
+
+model Workspace {
+  id            String            @id @default(cuid())
+  name          String
+  createdAt     DateTime          @default(now())
+
+  members       WorkspaceMember[]
+  channels      Channel[]
+  directMessages DirectMessage[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        String    @default("member")
+  joinedAt    DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@unique([userId, workspaceId])
+}
+
+model Channel {
+  id          String          @id @default(cuid())
+  name        String
+  workspaceId String
+  createdAt   DateTime        @default(now())
+
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id])
+  members     ChannelMember[]
+  messages    Message[]
+
+  @@unique([workspaceId, name])
+}
+
+model ChannelMember {
+  id        String  @id @default(cuid())
+  userId    String
+  channelId String
+
+  user      User    @relation(fields: [userId], references: [id])
+  channel   Channel @relation(fields: [channelId], references: [id])
+
+  @@unique([userId, channelId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  senderId  String
+  channelId String
+  createdAt DateTime @default(now())
+
+  sender    User     @relation(fields: [senderId], references: [id])
+  channel   Channel  @relation(fields: [channelId], references: [id])
+}
+
+model DirectMessage {
+  id          String    @id @default(cuid())
+  content     String
+  senderId    String
+  receiverId  String
+  workspaceId String
+  createdAt   DateTime  @default(now())
+
+  sender      User      @relation("SentDMs", fields: [senderId], references: [id])
+  receiver    User      @relation("ReceivedDMs", fields: [receiverId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+}
