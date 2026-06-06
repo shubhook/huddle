@@ -1,11 +1,12 @@
 import { request, type Request, type Response } from "express";
 import bcrypt from "bcrypt";
-import { authSchema } from "../types/auth.schema";
+import { signinSchema, signupSchema } from "../types/auth.schema";
 import { github } from "../utils/oauth";
 import * as arctic from "arctic";
 import { prisma } from "../db";
 import type { GithubUser } from "../types/oauth.types";
 import { generateToken, type tokenPayload } from "../utils/auth";
+import { is } from "zod/locales";
 
 
 export async function initiateGithubAuth(req: Request, res: Response) {
@@ -75,4 +76,83 @@ export async function handleGithubCallback(req: Request, res: Response) {
             message: "validation error",
         });
     };
+}
+
+export async function signup(req: Request, res: Response) {
+    const parsedBody = signupSchema.safeParse(req.body);
+
+    if(!parsedBody.success) {
+        res.status(400).json({
+            message: "validation error"
+        });
+        return;
+    }
+
+    const { username, email, password }  = parsedBody.data;
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    try {
+        const user = await prisma.user.create({
+            data: {
+                email: email,
+                hashedPassword: hashedPassword,
+                username: username,
+            }
+        });
+
+        res.status(201).json({
+            message: "User Created",
+            token: generateToken({ userId: user.id }),
+            username
+        })
+    }
+    catch(e) {
+        console.log(e);
+        res.status(409).json( {
+            message: "user already exists",
+        });
+        return;
+    }
+}
+
+export async function signin(req: Request, res: Response) {
+    const parsedBody = signinSchema.safeParse(req.body);
+
+    if(!parsedBody.success) {
+        res.status(400).json({
+            message: "validation error"
+        });
+        return;
+    }
+
+    const { email, password }  = parsedBody.data;
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: {
+                email
+            }
+        });
+
+        if(!user || !user.hashedPassword) {
+            res.status(404).json({ message: "Invalid credentials" })
+            return;
+        }
+
+        const isValid = await bcrypt.compare(password, user.hashedPassword);
+
+        if(!isValid) {
+            res.status(401).json({ message: "Invalid credentials" });
+            return;
+        }
+
+        res.status(200).json({
+            token: generateToken({ userId: user.id }),
+            username: user.username
+        });
+    } catch(e) {
+        console.error(e)
+        res.status(400).json({ message: "Invalid Username or Password" });
+        return;
+    }
 }
