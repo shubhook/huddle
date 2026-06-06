@@ -1,12 +1,11 @@
-import { request, type Request, type Response } from "express";
+import { type Request, type Response } from "express";
 import bcrypt from "bcrypt";
 import { signinSchema, signupSchema } from "../types/auth.schema";
 import { github } from "../utils/oauth";
 import * as arctic from "arctic";
 import { prisma } from "../db";
-import type { GithubUser } from "../types/oauth.types";
+import type { GithubUser, GitHubEmail } from "../types/oauth.types";
 import { generateToken, type tokenPayload } from "../utils/auth";
-import { is } from "zod/locales";
 
 
 export async function initiateGithubAuth(req: Request, res: Response) {
@@ -40,15 +39,25 @@ export async function handleGithubCallback(req: Request, res: Response) {
         });
 
         const githubUser = await response.json() as GithubUser;
+        let email: string | null = githubUser.email;
 
-        if (!githubUser.email) {
+        if (!email) {
+            const emailResponse = await fetch("https://api.github.com/user/emails", {
+                headers: { Authorization: `Bearer ${accessToken}` }
+            });
+            const emails = await emailResponse.json() as GitHubEmail[];
+            const primary = emails.find((e: any) => e.primary && e.verified);
+            email = primary?.email ?? null;
+        }
+
+        if (!email) {
             res.status(400).json({ message: "No email found on GitHub account" });
             return;
         }
 
         let user = await prisma.user.findUnique({
             where: {
-                email: githubUser.email,
+                email: email,
             }
         });
 
@@ -57,7 +66,7 @@ export async function handleGithubCallback(req: Request, res: Response) {
             user = await prisma.user.create({
                 data: {
                     username: githubUser.login,
-                    email: githubUser.email,
+                    email: email,
                 }
             });
         }
