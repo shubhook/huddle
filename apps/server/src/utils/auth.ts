@@ -22,13 +22,13 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     }
 
     try {
-        const decoded = await jwt.verify(token, env.JwtSecret) as tokenPayload;
+        const decoded = jwt.verify(token, env.JwtSecret) as tokenPayload;
         req.userId = decoded.userId;
         next();
         
     } catch(err) {
         console.log(err);
-        res.status(403).json({
+        res.status(401).json({
             mesaage: "Unauthorised Endpoint"
         });
         return;

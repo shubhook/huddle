@@ -71,7 +71,7 @@ export async function handleGithubCallback(req: Request, res: Response) {
             });
         }
 
-        const BearerToken: string = generateToken(user!.id as unknown as tokenPayload);
+        const BearerToken: string = generateToken({ userId: user.id });
 
         res.status(200).json({
             message: "ok",

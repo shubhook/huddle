@@ -6,5 +6,5 @@ export const authRouter = Router();
 
 authRouter.get('/auth/github', asyncHandler(initiateGithubAuth));
 authRouter.get('/auth/github/callback', asyncHandler(handleGithubCallback));
-authRouter.post('/auth/signup', asyncHandler(signup))
-authRouter.post('/auth/signin', asyncHandler(signin))
+authRouter.post('/auth/signup', asyncHandler(signup));
+authRouter.post('/auth/signin', asyncHandler(signin));
