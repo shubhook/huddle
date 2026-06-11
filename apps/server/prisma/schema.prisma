@@ -34,6 +34,7 @@ model Workspace {
   members       WorkspaceMember[]
   channels      Channel[]
   directMessages DirectMessage[]
+  invites       WorkspaceInvites[]
 }
 
 model WorkspaceMember {
@@ -94,5 +95,15 @@ model DirectMessage {
 
   sender      User      @relation("SentDMs", fields: [senderId], references: [id])
   receiver    User      @relation("ReceivedDMs", fields: [receiverId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+}
+
+model WorkspaceInvites {
+  id          String    @id @default(uuid())
+  token       String    @unique
+  workspaceId String 
+  createdId   DateTime
+  expiresAt   DateTime
+
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
 }
