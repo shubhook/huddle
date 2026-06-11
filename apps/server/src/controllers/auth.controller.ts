@@ -5,7 +5,7 @@ import { github } from "../utils/oauth";
 import * as arctic from "arctic";
 import { prisma } from "../db";
 import type { GithubUser, GitHubEmail } from "../types/oauth.types";
-import { generateToken, type tokenPayload } from "../utils/auth";
+import { generateToken } from "../utils/auth";
 
 
 export async function initiateGithubAuth(req: Request, res: Response) {

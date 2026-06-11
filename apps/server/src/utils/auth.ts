@@ -20,7 +20,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
         });
         return;
     }
-
+    
     try {
         const decoded = jwt.verify(token, env.JwtSecret) as tokenPayload;
         req.userId = decoded.userId;
