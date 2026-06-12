@@ -1,9 +1,8 @@
 import type { Request, Response } from "express";
-import { new_workspace_schema } from "../types/workspace.schema";
+import { new_workspace_schema } from "../types/request.schema";
 import { prisma } from "../db";
 import crypto from "crypto";
-import { userInfo } from "os";
-import { waitForDebugger } from "inspector";
+import { channelAuth } from "../middleware/channel.middleware";
 
 class WorkspaceNotFoundError extends Error {
     constructor(workspaceId: string) {
@@ -132,13 +131,30 @@ export async function joinWorkspace(req: Request, res: Response) {
             return;
         }
 
-        const workspace = await prisma.workspaceMember.create({
-            data: {
-                workspaceId: response.workspaceId,
-                userId: userId,
-                role: "member"
-            }
-        });
+        const workspace = await prisma.$transaction( async (tx) => {
+            const workspaceMember = await tx.workspaceMember.create({
+                data: {
+                    workspaceId: response.workspaceId,
+                    userId: userId,
+                    role: "member"
+                }
+            });
+
+            const channels = await tx.channel.findMany({
+                where: {
+                    workspaceId: workspaceMember.workspaceId
+                }
+            });
+
+            await tx.channelMember.createMany({
+                data: channels.map((channel) => ({
+                    userId: req.userId,
+                    channelId: channel.id,
+                }))
+            })
+
+            return workspaceMember;
+        })
 
         res.status(201).json({ message: `Joined workspace`, workspaceId: workspace.workspaceId });
     }
