@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { prisma } from "../db";
 
 export async function workspaceAuth(req: Request, res: Response, next: NextFunction) {
-    const workspaceId = req.params.workspaceId;
+    const workspaceId = req.params.id;
 
     if (typeof workspaceId !== "string") {
         res.status(400).json({
