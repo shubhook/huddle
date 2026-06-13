@@ -57,7 +57,7 @@ export async function createChannel(req: Request, res: Response) {
 }
 
 export async function getAllChannels(req: Request, res: Response) {
-    const workspaceId = req.query.id as string;
+    const workspaceId = req.params.id as string;
 
     if(!workspaceId) {
             res.status(400).json({ error: "Workspace ID is required" });
@@ -89,7 +89,7 @@ export async function getAllChannels(req: Request, res: Response) {
 
 export async function getMessages(req: Request, res: Response) {
     const channelId = req.params.id as string | undefined;
-    const cursor = req.params.cursor as string  | undefined;
+    const cursor = req.query.cursor as string  | undefined;
 
     if(!channelId) { 
         res.status(400).json({ error: "Channel ID is required" });
