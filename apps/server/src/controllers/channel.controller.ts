@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { new_channel_schema } from "../types/request.schema";
+import { message_schema, new_channel_schema } from "../types/request.schema";
 import { prisma } from "../db";
 
 export async function createChannel(req: Request, res: Response) {
@@ -125,6 +125,40 @@ export async function getMessages(req: Request, res: Response) {
         console.error(e);
         res.status(500).json({
             message: "Failed to fetch messages. Please try again.",
+        });
+        return;
+    }
+}
+
+export async function sendMessages(req: Request, res: Response) {
+    const channelId = req.params.id as string;
+    const content = message_schema.safeParse(req.body);
+    const senderId = req.userId;
+
+    if(!content.success) {
+        res.status(400).json({ message: "Invalid message content" });
+        return;
+    }
+
+    try {
+        const response = await prisma.message.create({
+            data: {
+                content: content.data.content,
+                senderId: senderId,
+                channelId: channelId,
+            }
+        });
+
+        res.status(201).json({
+            message: "Message sent successfully",
+            data: response
+        });
+        return;
+    }
+    catch(e) {
+        console.error(e);
+        res.status(500).json({
+            message: "Failed to send message. Please try again.",
         });
         return;
     }
