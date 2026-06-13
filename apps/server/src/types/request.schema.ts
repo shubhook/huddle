@@ -11,3 +11,8 @@ export const new_channel_schema = z.object({
 export const message_schema = z.object({
     content: z.string().min(1, "content is required")
 });
+
+export const direct_message_schema = z.object({
+    content: z.string().min(1, "content is required"),
+    workspaceId: z.string().min(1, "workspace id is required")
+});
