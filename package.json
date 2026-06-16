@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev:server": "cd apps/server && bun run src/index.ts",
+    "dev:web": "cd apps/web && bun run index.ts",
+    "dev": "bun run dev:server"
   },
   "keywords": [],
   "author": "",
