@@ -109,9 +109,11 @@ export async function signup(req: Request, res: Response) {
             }
         });
 
+        const BearerToken: string = generateToken({ userId: user.id });
+        
+        res.cookie('jwt_token', BearerToken, { httpOnly: true });
         res.status(201).json({
             message: "User Created",
-            token: generateToken({ userId: user.id }),
             username
         })
     }
@@ -155,8 +157,10 @@ export async function signin(req: Request, res: Response) {
             return;
         }
 
+        const BearerToken: string = generateToken({ userId: user.id })
+
+        res.cookie("jwt_token", BearerToken, { httpOnly: true});
         res.status(200).json({
-            token: generateToken({ userId: user.id }),
             username: user.username
         });
     } catch(e) {

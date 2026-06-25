@@ -11,10 +11,9 @@ export function generateToken(payload: tokenPayload): string {
 }
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
-    const authHeader = req.headers["authorization"];
-    const token = authHeader && authHeader.split(' ')[1];
+    const token = req.cookies["jwt_token"] as string;
 
-    if(token == undefined) {
+    if(token == undefined || token == "") {
         res.status(401).json({
             message: "<Missing Token>"
         });
@@ -29,7 +28,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     } catch(err) {
         console.log(err);
         res.status(401).json({
-            mesaage: "Unauthorised Endpoint"
+            message: "Unauthorised Endpoint"
         });
         return;
     }
