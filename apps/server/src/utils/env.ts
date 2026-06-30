@@ -8,7 +8,7 @@ export function readRequiredEnv(handle: string): string {
 
 export const env = {
 
-    PORT: process.env.PORT || "3000",
+    PORT: Number(process.env.PORT) || 3000,
     JwtSecret: readRequiredEnv("JWT_SECRET"),
     githubClientId: readRequiredEnv("CLIENT_ID"),
     githubSecret: readRequiredEnv("CLIENT_SECRET"),
