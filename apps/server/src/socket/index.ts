@@ -5,10 +5,9 @@ import jwt from "jsonwebtoken";
 
 import { env } from "../utils/env";
 import type { tokenPayload } from "../utils/auth";
-
-interface AuthenticatedWebSocket extends WebSocket {
-    userId: string;
-}
+import { handleJoinChannel } from "./handlers";
+import type { parsedObjectType } from "./types";
+import type { AuthenticatedWebSocket } from "./types";
 
 const parseCookies = (cookieString: string) =>
     Object.fromEntries(
@@ -70,12 +69,41 @@ export function setupWebSocket(app: Express) {
             );
 
             ws.on("message", (data) => {
-                console.log(
-                    `Message from user ${ws.userId}:`,
-                    data.toString()
-                );
 
-                ws.send(`echo: ${data}`);
+                try {
+                    const parsedObj: parsedObjectType = JSON.parse(data.toString());
+
+                    const type = parsedObj.type;
+                    const payload = parsedObj.payload;
+
+                    switch (type) {
+                        case "join_channel":
+                            handleJoinChannel(ws, payload, ws.userId)
+                            break;
+
+                        case "send_message":
+                            handleSendMessage(ws, payload, ws.userId)
+                            break;
+
+                        case "send_direct_message":
+                            handleSendDirectMessage(ws, payload, ws.userId)
+                            break;
+
+                        case "leave_channel":
+                            handleLeaveChannel(ws, payload, ws.userId)
+                            break;
+
+                        case "leave_direct_message":
+                            handleLeaveDirectMessage(ws, payload, ws.userId)
+                            break;
+
+                        default:    
+                            console.error(`Unknown message type: ${type}`);
+                            break;
+                    }
+                }
+                catch(e) {}
+                
             });
 
             ws.on("close", () => {

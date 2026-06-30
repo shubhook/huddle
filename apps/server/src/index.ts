@@ -2,7 +2,6 @@ import express from "express"
 import cookieParser from "cookie-parser";
 import { env } from "./utils/env";
 import { appRouter } from "./routes";
-import { WebSocketServer } from "ws";
 import { setupWebSocket } from "./socket";
 
 const app = express();
