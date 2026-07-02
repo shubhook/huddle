@@ -80,8 +80,21 @@ export async function handleSendDirectMessage(ws: WebSocket, payload: ClientMess
     ws.send(JSON.stringify({ type: "send_direct_message_ack", message: "Direct message sent (stub)" }));
 }
 
-export async function handleLeaveChannel(ws: WebSocket, payload: ClientMessage, userId: string) {
-    // TODO: Implement logic for leaving a channel
+export async function handleLeaveChannel(ws: AuthenticatedWebSocket, payload: ClientMessage, userId: string) {
+    const { channelId } = payload;
+    if (!channelId) {
+        ws.send(JSON.stringify({ type: "error", message: "Missing channelId in leave_channel payload" }));
+        return;
+    }
+
+    let subscribers = channelSubscriptions.get(channelId);
+    if (subscribers) {
+        subscribers.delete(ws);
+        // Optionally, clean up empty sets
+        if (subscribers.size === 0) {
+            channelSubscriptions.delete(channelId);
+        }
+    }
     ws.send(JSON.stringify({ type: "leave_channel_ack", message: "Left channel (stub)" }));
 }
 
