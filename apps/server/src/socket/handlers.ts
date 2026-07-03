@@ -62,7 +62,7 @@ export async function handleJoinChannel(ws: AuthenticatedWebSocket, payload: Cli
 
         ws.send(JSON.stringify({ type: "join_channel_ack", message: "Successfully joined channel", channelId }));
 
-        // Optionally: Notify other users in the channel if you have a mechanism to do so
+        // TODO: Notify other users in the channel.
 
     } catch (error) {
         ws.send(JSON.stringify({ type: "error", message: "An unknown error occurred joining the channel" }));
@@ -78,7 +78,7 @@ export async function handleSendMessage(ws: WebSocket, payload: ClientMessage, u
             ws.send(JSON.stringify({ type: "error", message: "Content not found" }))
             return;
         }
-        
+
         const channel = await prisma.channel.findUnique({
             where: {
                 id: channelId

@@ -5,9 +5,10 @@ import jwt from "jsonwebtoken";
 
 import { env } from "../utils/env";
 import type { tokenPayload } from "../utils/auth";
-import { handleJoinChannel } from "./handlers";
+import { handleJoinChannel, handleLeaveChannel, handleSendMessage, handleSendDirectMessage, handleLeaveDirectMessage } from "./handlers";
 import type { parsedObjectType } from "./types";
 import type { AuthenticatedWebSocket } from "./types";
+import { cleanupSocket } from "./state";
 
 const parseCookies = (cookieString: string) =>
     Object.fromEntries(
@@ -107,6 +108,7 @@ export function setupWebSocket(app: Express) {
             });
 
             ws.on("close", () => {
+                cleanupSocket(ws);
                 console.log(`User ${ws.userId} disconnected`);
             });
 
