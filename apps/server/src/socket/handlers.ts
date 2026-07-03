@@ -1,4 +1,4 @@
-import type WebSocket from "ws";
+import WebSocket from "ws";
 import type { ClientMessage } from "./types";
 import { prisma } from "../db";
 
@@ -71,8 +71,78 @@ export async function handleJoinChannel(ws: AuthenticatedWebSocket, payload: Cli
 }
 
 export async function handleSendMessage(ws: WebSocket, payload: ClientMessage, userId: string) {
-    // TODO: Implement logic for sending a message to a channel
-    ws.send(JSON.stringify({ type: "send_message_ack", message: "Message sent (stub)" }));
+    try {
+        const { channelId, workspaceId, content } = payload;
+        
+        if(!content) {
+            ws.send(JSON.stringify({ type: "error", message: "Content not found" }))
+            return;
+        }
+        
+        const channel = await prisma.channel.findUnique({
+            where: {
+                id: channelId
+            }
+        });
+
+
+        if (!channel) {
+            ws.send(JSON.stringify({ type: "error", message: "Channel not found" }));
+            return;
+        }
+
+        if (channel.workspaceId !== workspaceId) {
+            ws.send(JSON.stringify({ type: "error", message: "Channel does not belong to this workspace" }));
+            return;
+        }
+
+        const channelMembership = await prisma.channelMember.findUnique({
+            where: {
+                userId_channelId: {
+                    userId: userId,
+                    channelId: channelId
+                }
+            }
+        });
+
+        if (!channelMembership) {
+            ws.send(JSON.stringify({ type: "error", message: "Not a member of this channel" }));
+            return;
+        }
+
+        const response = await prisma.message.create({
+            data:{
+                content: content,
+                senderId: userId,
+                channelId: channelId,
+            }
+        })
+
+        const subscribers = channelSubscriptions.get(channelId);
+
+        if (subscribers) {
+            const messagePayload = {
+                type: "new_message",
+                payload: {
+                    id: response.id,
+                    channelId: response.channelId,
+                    senderId: response.senderId,
+                    content: response.content,
+                    createdAt: response.createdAt
+                }
+            };
+
+            for (const subscriber of subscribers) {
+                if (subscriber.readyState === WebSocket.OPEN) {
+                    subscriber.send(JSON.stringify(messagePayload));
+                }
+            }
+        }
+    }
+    catch(error) {
+        ws.send(JSON.stringify({ type: "error", message: "An unknown error occurred sending to the channel" }));
+        console.error("handleSendMessage error:", error);
+    }
 }
 
 export async function handleSendDirectMessage(ws: WebSocket, payload: ClientMessage, userId: string) {
