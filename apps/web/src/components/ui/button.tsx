@@ -4,49 +4,82 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * Huddle buttons — two shapes pulled from Figma:
+ * - `ink`     : solid ink button (50px hero / 40px nav)
+ * - `outline` : hairline-bordered transparent button (50px hero "Documentation")
+ * - `ghost`   : icon-only text-graphite (chat header)
+ *
+ * Sizes match Figma: `hero` = 50h, `nav` = 40h, `default` = 36h, `sm` = 32h, `icon` = 26h.
+ */
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+  [
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md",
+    "text-sm font-normal leading-6",
+    "transition-colors",
+    "disabled:pointer-events-none disabled:opacity-50",
+    "[&_svg]:pointer-events-none [&_svg]:shrink-0",
+    "outline-none focus-visible:ring-2 focus-visible:ring-ink/30",
+  ].join(" "),
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive:
-          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+        // Solid ink — primary action (Quick Start, Get started)
+        ink:
+          "bg-ink text-text-on-ink hover:bg-ink/90 active:bg-ink/95",
+        // Hairline border on transparent — secondary (Documentation)
         outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-        link: "text-primary underline-offset-4 hover:underline",
+          "bg-transparent text-ink border border-hairline hover:bg-surface-2",
+        // Text-only — chat header / message input icon buttons
+        ghost:
+          "bg-transparent text-text-subtle hover:text-ink",
+        // shadcn-style fallbacks so the rest of the design system still works
+        default:
+          "bg-ink text-text-on-ink hover:bg-ink/90",
+        secondary:
+          "bg-surface-2 text-ink hover:bg-surface-2/80 border border-hairline",
+        link:
+          "text-ink underline-offset-4 hover:underline",
+        destructive:
+          "bg-destructive text-text-on-ink hover:bg-destructive/90",
       },
       size: {
-        default: "h-9 px-4 py-2 has-[>svg]:px-3",
-        sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
-        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
-        icon: "size-9",
-        "icon-sm": "size-8",
-        "icon-lg": "size-10",
+        // Hero CTA — 50px tall, 24/13 padding
+        hero: "h-[50px] px-6 py-[13px] rounded-md text-base",
+        // Top nav CTA — 40px tall, 16/8 padding
+        nav: "h-10 px-4 py-2 rounded-md text-base",
+        default: "h-9 px-4 py-2",
+        sm: "h-8 rounded-md px-3 text-sm",
+        icon: "h-[26px] w-5 p-0 rounded-md",
+        "icon-sm": "size-8 rounded-md",
+        "icon-lg": "size-10 rounded-md",
       },
     },
     defaultVariants: {
-      variant: "default",
-      size: "default",
+      variant: "ink",
+      size: "nav",
     },
   },
 );
 
-function Button({
-  className,
-  variant,
-  size,
-  asChild = false,
-  ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean;
-  }) {
-  const Comp = asChild ? Slot : "button";
+interface ButtonProps
+  extends React.ComponentProps<"button">,
+    VariantProps<typeof buttonVariants> {
+  asChild?: boolean;
+}
 
-  return <Comp data-slot="button" className={cn(buttonVariants({ variant, size, className }))} {...props} />;
+function Button({ className, variant, size, asChild = false, ...props }: ButtonProps) {
+  const Comp = asChild ? Slot : "button";
+  return (
+    <Comp
+      data-slot="button"
+      data-variant={variant}
+      data-size={size}
+      className={cn(buttonVariants({ variant, size, className }))}
+      {...props}
+    />
+  );
 }
 
 export { Button, buttonVariants };
+export type { ButtonProps };
