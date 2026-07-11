@@ -32,6 +32,9 @@
   --color-signal: var(--signal);
   --color-destructive: var(--destructive);
   --color-window-min: var(--window-min);
+  --color-surface-frost: var(--surface-frost);
+  --color-surface-container: var(--surface-container);
+  --color-hairline-frost-50: var(--hairline-frost-50);
 
   /* raw shades preserved from shadcn defaults, in case we use them later */
   --color-background: var(--background);
@@ -86,6 +89,10 @@
   --hairline: #e2e2e2;                    /* mercury */
   --hairline-strong: #c7c6ca;             /* french-gray */
   --hairline-frost: rgba(199, 198, 202, 0.3);
+  --hairline-frost-50: rgba(199, 198, 202, 0.5);
+
+  /* auth input fill — gallery */
+  --surface-container: #eeeeee;
 
   /* text */
   --text: #1a1c1c;
