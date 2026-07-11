@@ -1,74 +1,125 @@
-import { Avatar } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
+import { useMemo, useState } from "react";
+
+import { CreateWorkspaceModal } from "@/components/workspace/CreateWorkspaceModal";
+import { InviteLinkPanel } from "@/components/workspace/InviteLinkPanel";
+import { JoinWorkspaceScreen } from "@/components/workspace/JoinWorkspaceScreen";
+import { navigateTo, useHashRoute } from "@/lib/hashRoute";
+import { DashboardPage } from "@/pages/DashboardPage";
+import { LandingPage } from "@/pages/LandingPage";
+import { SigninPage } from "@/pages/SigninPage";
+import { SignupPage } from "@/pages/SignupPage";
 import "./index.css";
 
 export function App() {
-  return (
-    <div className="min-h-screen bg-surface-lowest px-8 py-12 text-ink">
-      <header className="mx-auto max-w-3xl">
-        <h1 className="text-[40px] font-semibold leading-[1.1] tracking-[-0.04em]">
-          Huddle · Step 1 — Primitives
-        </h1>
-        <p className="mt-2 text-text-muted">
-          Quick smoke test of the shadcn primitives pulled from the Figma frame.
-        </p>
-      </header>
+  const route = useHashRoute();
+  const [workspaceName, setWorkspaceName] = useState("core-infrastructure");
+  const [workspaceStep, setWorkspaceStep] = useState<"create" | "invite" | null>(
+    null,
+  );
 
-      <section className="mx-auto mt-12 max-w-3xl space-y-10">
-        <div>
-          <h2 className="mb-3 font-mono-label text-text-muted">Button</h2>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button variant="ink" size="hero">
-              Quick Start
-            </Button>
-            <Button variant="outline" size="hero">
-              Documentation
-            </Button>
-            <Button variant="ink" size="nav">
-              Get started
-            </Button>
-            <Button variant="ghost" size="icon" aria-label="Search" />
+  const inviteUrl = useMemo(
+    () => `https://huddle.app/join/${workspaceName}`,
+    [workspaceName],
+  );
+
+  if (route === "/signup") {
+    return (
+      <SignupPage
+        onSignIn={() => navigateTo("/signin")}
+        onSubmit={async (values) => {
+          console.log("signup", values);
+          navigateTo("/workspace/create");
+        }}
+      />
+    );
+  }
+
+  if (route === "/signin") {
+    return (
+      <SigninPage
+        onSignUp={() => navigateTo("/signup")}
+        onSubmit={async (values) => {
+          console.log("signin", values);
+          navigateTo("/app");
+        }}
+      />
+    );
+  }
+
+  if (route === "/join") {
+    return (
+      <JoinWorkspaceScreen
+        onSignIn={() => navigateTo("/signin")}
+        onSubmit={async (inviteCode) => {
+          console.log("join", inviteCode);
+          navigateTo("/app");
+        }}
+      />
+    );
+  }
+
+  if (route === "/app") {
+    return (
+      <>
+        <DashboardPage
+          workspaceName={workspaceName}
+          onLogout={() => navigateTo("/signin")}
+          onWorkspaceClick={() => setWorkspaceStep("create")}
+        />
+        <CreateWorkspaceModal
+          open={workspaceStep === "create"}
+          step={1}
+          onClose={() => setWorkspaceStep(null)}
+          onContinue={async ({ workspaceName: name }) => {
+            setWorkspaceName(name);
+            setWorkspaceStep("invite");
+          }}
+        />
+        {workspaceStep === "invite" && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/20 p-4">
+            <InviteLinkPanel
+              workspaceName={workspaceName}
+              inviteUrl={inviteUrl}
+              onContinue={() => {
+                setWorkspaceStep(null);
+                navigateTo("/app");
+              }}
+            />
           </div>
-        </div>
+        )}
+      </>
+    );
+  }
 
-        <Separator />
-
-        <div>
-          <h2 className="mb-3 font-mono-label text-text-muted">Badge</h2>
-          <div className="flex flex-wrap items-center gap-3">
-            <Badge dot>v0.1 · WebSocket layer live</Badge>
-            <Badge variant="plain" dot>
-              # engineering-deployments
-            </Badge>
-          </div>
-        </div>
-
-        <Separator />
-
-        <div>
-          <h2 className="mb-3 font-mono-label text-text-muted">Input</h2>
-          <Input
-            placeholder="Message #engineering-deployments"
-            className="max-w-md"
+  if (route === "/workspace/create") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-surface-lowest p-4">
+        {workspaceStep === "invite" ? (
+          <InviteLinkPanel
+            workspaceName={workspaceName}
+            inviteUrl={inviteUrl}
+            onContinue={() => navigateTo("/app")}
           />
-        </div>
+        ) : (
+          <CreateWorkspaceModal
+            open
+            step={1}
+            onContinue={async ({ workspaceName: name }) => {
+              setWorkspaceName(name);
+              setWorkspaceStep("invite");
+            }}
+          />
+        )}
+      </div>
+    );
+  }
 
-        <Separator />
-
-        <div>
-          <h2 className="mb-3 font-mono-label text-text-muted">Avatar</h2>
-          <div className="flex items-center gap-3">
-            <Avatar name="Alice" size="sm" />
-            <Avatar name="Bob Ops" size="md" />
-            <Avatar name="System Bot" size="lg" />
-            <Avatar name="Carol Engineer" size="xl" />
-          </div>
-        </div>
-      </section>
-    </div>
+  return (
+    <LandingPage
+      onSignIn={() => navigateTo("/signin")}
+      onGetStarted={() => navigateTo("/signup")}
+      onQuickStart={() => navigateTo("/signup")}
+    />
   );
 }
 
