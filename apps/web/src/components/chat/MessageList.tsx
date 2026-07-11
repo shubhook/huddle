@@ -1,0 +1,78 @@
+import { useMemo } from "react";
+
+import { MessageFrame } from "@/components/chat/MessageFrame";
+import { EmptyChannelState } from "@/components/chat/EmptyChannelState";
+import { cn } from "@/lib/utils";
+import type { ChatMessage } from "@/types";
+
+interface MessageListProps {
+  messages: ChatMessage[];
+  channelName: string;
+  className?: string;
+}
+
+function shouldGroupWithPrevious(
+  current: ChatMessage,
+  previous: ChatMessage | undefined,
+): boolean {
+  if (!previous) return false;
+  return (
+    current.sender === previous.sender &&
+    current.channel === previous.channel &&
+    !current.dateLabel &&
+    !previous.dateLabel
+  );
+}
+
+export function MessageList({
+  messages,
+  channelName,
+  className,
+}: MessageListProps) {
+  const renderedMessages = useMemo(() => {
+    return messages.map((message, index) => ({
+      message,
+      isGrouped: shouldGroupWithPrevious(message, messages[index - 1]),
+    }));
+  }, [messages]);
+
+  if (messages.length === 0) {
+    return <EmptyChannelState channelName={channelName} className={className} />;
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex flex-1 flex-col overflow-y-auto px-6 pb-6 pt-10",
+        className,
+      )}
+    >
+      {renderedMessages.map(({ message, isGrouped }, index) => (
+        <div
+          key={message.id}
+          className={cn(index > 0 && (isGrouped ? "mt-2" : "mt-12"))}
+        >
+          {message.dateLabel && (
+            <div className="mb-12 flex items-center justify-center">
+              <div className="h-px w-[100px] max-w-[100px] bg-hairline-strong" />
+              <span className="px-2 font-mono text-[10px] uppercase leading-[15px] text-ink">
+                {message.dateLabel}
+              </span>
+              <div className="h-px w-[100px] max-w-[100px] bg-hairline-strong" />
+            </div>
+          )}
+
+          <MessageFrame
+            sender={message.sender}
+            channel={message.channel}
+            timestamp={message.timestamp}
+            content={message.content}
+            codeBlock={message.codeBlock}
+            avatarTone={message.avatarTone}
+            isGrouped={isGrouped}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
