@@ -9,13 +9,13 @@ import { LandingPage } from "@/pages/LandingPage";
 import { SigninPage } from "@/pages/SigninPage";
 import { SignupPage } from "@/pages/SignupPage";
 import "./index.css";
+import { signin } from "./lib/api";
 
 export function App() {
   const route = useHashRoute();
   const [workspaceName, setWorkspaceName] = useState("core-infrastructure");
-  const [workspaceStep, setWorkspaceStep] = useState<"create" | "invite" | null>(
-    null,
-  );
+  const [workspaceStep, setWorkspaceStep] = useState<"create" | "invite" | null>(null,);
+  const [signinError, setSigninError] = useState<string | undefined>();
 
   const inviteUrl = useMemo(
     () => `https://huddle.app/join/${workspaceName}`,
@@ -39,8 +39,13 @@ export function App() {
       <SigninPage
         onSignUp={() => navigateTo("/signup")}
         onSubmit={async (values) => {
-          console.log("signin", values);
-          navigateTo("/app");
+          try {
+            const res = await signin(values.email, values.password);
+            navigateTo("/app");
+          }
+          catch(err) {
+            setSigninError("Invalid email or password");
+          }
         }}
       />
     );
