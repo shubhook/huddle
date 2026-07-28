@@ -3,6 +3,7 @@ import { ArrowRight, KeyRound, Mail, User } from "lucide-react";
 
 import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthField } from "@/components/auth/AuthField";
+import { GithubAuthButton } from "@/components/auth/GithubAuthButton";
 import { cn } from "@/lib/utils";
 
 interface SignupFormProps {
@@ -49,6 +50,8 @@ export function SignupForm({
       </div>
 
       <form className="flex flex-col gap-4 bg-surface-lowest p-6" onSubmit={handleSubmit}>
+        <GithubAuthButton variant="signup" label="Continue with GitHub" />
+
         <AuthField
           name="username"
           type="text"
