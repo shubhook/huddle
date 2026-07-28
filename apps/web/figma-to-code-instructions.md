@@ -1,4 +1,4 @@
-# Huddle — Figma-to-Code Build Instructions
+# Huddle - Figma-to-Code Build Instructions
 
 You are implementing the Huddle frontend from Figma designs that have already been imported. Your job is to read the Figma structure exactly and translate it into clean, modular React code — not to reinterpret or improve the design. Match what's in Figma precisely: spacing, colors, type sizes, corner radii, component states.
 
@@ -13,6 +13,8 @@ You are implementing the Huddle frontend from Figma designs that have already be
 
 ---
 
+
+
 ## Stack (already established — do not deviate)
 
 - Bun runtime, `Bun.serve()` with HTML imports — no Vite
@@ -23,6 +25,8 @@ You are implementing the Huddle frontend from Figma designs that have already be
 - No Zustand, no react-router — Context + hash-based routing only
 
 ---
+
+
 
 ## File structure — mandatory, one component per file
 
@@ -71,7 +75,7 @@ apps/web/src/
 
 **Rule: no component file exceeds ~150 lines.** If a component grows past that, it's doing too much — split it (e.g., `MessageFrame.tsx` should not also contain the grouping logic for consecutive messages; that logic lives in `MessageList.tsx`, which just decides *when* to render a full frame vs. a collapsed one).
 
-**Rule: every component gets a typed props interface, declared directly above the component, named `{ComponentName}Props`.**
+**Rule: every component gets a typed props interface, declared directly above the component, named** `{ComponentName}Props`**.**
 
 ```tsx
 interface MessageFrameProps {
@@ -87,6 +91,8 @@ export function MessageFrame({ sender, timestamp, content, isGrouped }: MessageF
 ```
 
 ---
+
+
 
 ## Design token extraction
 
@@ -107,41 +113,57 @@ Then extend `tailwind.config` (or the CSS-based `@theme` block in Tailwind v4) t
 
 ---
 
+
+
 ## Component-by-component build order
 
 Build in this order — each step's components become dependencies for the next:
 
 ### Step 1 — Primitives (`components/ui/`)
+
 Pull Button, Input, Badge, Avatar, Tabs, Separator, Dialog from Figma's component set if one exists. Match every state visible in Figma: default, hover, focus, disabled, active. If Figma only shows the default state for something, infer hover/focus from the rest of the design system's conventions (don't invent a new visual language for missing states).
 
 ### Step 2 — Layout shell
+
 `Navbar.tsx` (landing), `Sidebar.tsx` + `TopBar.tsx` (dashboard). These are structural — get the exact spacing and breakpoints from Figma's auto-layout properties.
 
 ### Step 3 — The signature: `MessageFrame.tsx`
+
 This is the most important component. Read its anatomy directly from Figma:
+
 - What exactly is in the metadata strip (sender, timestamp, channel)?
 - Exact border radius, border color, padding from the Figma node
 - How does the "grouped" (collapsed) state differ visually from the full state? Figma should show both variants — implement both, driven by the `isGrouped` prop, not two separate components
 
+
+
 ### Step 4 — Auth screens
+
 `SignupForm.tsx`, `SigninForm.tsx`, sharing `AuthCard.tsx` for the wrapper. Match input states (default/error/focus) exactly as shown in Figma variants.
 
 ### Step 5 — Landing page sections
+
 Build each section (`Hero`, `FeatureGrid`, `ArchitecturePanel`, `StatsRow`, `Footer`) as isolated components, then compose them in `LandingPage.tsx` in the same vertical order as the Figma frame.
 
 ### Step 6 — Dashboard / Chat
+
 `MessageList.tsx` (handles grouping logic + scroll behavior), `MessageInput.tsx`, `ConnectionBadge.tsx`, `EmptyChannelState.tsx`. Compose into `DashboardPage.tsx`.
 
 ### Step 7 — Workspace flows
+
 `CreateWorkspaceModal.tsx`, `InviteLinkPanel.tsx`, `JoinWorkspaceScreen.tsx`.
 
 ---
+
+
 
 ## What "match exactly" means in practice
 
 - If Figma shows a button at 44px height with 16px horizontal padding and 8px radius — use those exact values, not `py-2 px-4 rounded-md` guessed from memory
 - If Figma's type scale shows the hero headline at 64px with -0.03em tracking — use that exact size and tracking, don't round to a Tailwind default like `text-6xl` unless it happens to match
 - Copy the exact copy/microcopy text from Figma if it's present in the design — don't paraphrase button labels or headlines
+
+
 
 ## What you should NOT copy literally
 
@@ -150,6 +172,8 @@ Build each section (`Hero`, `FeatureGrid`, `ArchitecturePanel`, `StatsRow`, `Foo
 
 ---
 
+
+
 ## After building each screen
 
 1. Run the dev server and take a screenshot if your environment supports it
@@ -157,6 +181,8 @@ Build each section (`Hero`, `FeatureGrid`, `ArchitecturePanel`, `StatsRow`, `Foo
 3. Fix any drift before moving to the next screen — don't let small inconsistencies compound across 6 screens
 
 ---
+
+
 
 ## Definition of done
 
