@@ -57,13 +57,13 @@ export function AuthField({
         <input
           id={fieldId}
           className={cn(
-            "w-full rounded border border-hairline-frost-50 outline-none transition-colors",
-            "focus-visible:border-ink/40",
+            "w-full rounded border border-hairline outline-none transition-colors",
+            "focus-visible:border-brand-500 focus-visible:ring-2 focus-visible:ring-brand-500/20",
             "disabled:cursor-not-allowed disabled:opacity-50",
             inputVariant === "signin" &&
-              "bg-paper px-[17px] py-[11px] text-base placeholder:text-text-subtle/50",
+              "bg-paper px-[17px] py-[11px] text-base placeholder:text-text-placeholder",
             inputVariant === "signup" &&
-              "h-11 bg-surface-container px-[9px] text-sm placeholder:text-hairline-strong",
+              "h-11 bg-surface-container px-[9px] text-sm placeholder:text-text-placeholder",
             Icon && iconPosition === "left" && "pl-[31px]",
             Icon && iconPosition === "right" && "pr-10",
             error && "border-destructive focus-visible:border-destructive",

@@ -14,7 +14,7 @@ const STATUS_LABELS: Record<ConnectionStatus, string> = {
 
 const STATUS_DOT_CLASSES: Record<ConnectionStatus, string> = {
   connected: "bg-signal",
-  connecting: "bg-[#fbbf24]",
+  connecting: "bg-warning",
   disconnected: "bg-text-placeholder",
 };
 
@@ -22,7 +22,7 @@ export function ConnectionBadge({ status, className }: ConnectionBadgeProps) {
   return (
     <div
       className={cn(
-        "inline-flex items-center rounded-xl border border-[#e5e7eb] px-[9px] py-[5px]",
+        "inline-flex items-center rounded-xl border border-hairline bg-paper px-[9px] py-[5px]",
         className,
       )}
       role="status"

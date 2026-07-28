@@ -42,10 +42,12 @@ export function MessageInput({
     }
   }
 
+  const canSend = !disabled && value.trim().length > 0;
+
   return (
     <div className={cn("shrink-0 px-6 pb-6", className)}>
-      <div className="overflow-hidden rounded border border-[#e5e7eb] bg-surface-2 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]">
-        <div className="flex items-center border-b border-[#e5e7eb] px-1 py-1">
+      <div className="overflow-hidden rounded-md border border-hairline bg-paper shadow-[0px_1px_2px_0px_rgba(15,23,42,0.04)] focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/15">
+        <div className="flex items-center border-b border-hairline bg-surface-lowest px-1 py-1">
           {TOOLBAR_ACTIONS.map(({ label, icon: Icon }) => (
             <Button
               key={label}
@@ -76,11 +78,14 @@ export function MessageInput({
           />
           <Button
             type="button"
-            variant="ghost"
+            variant={canSend ? "ink" : "ghost"}
             size="icon"
             aria-label="Send message"
-            className="mb-0.5 size-8 shrink-0"
-            disabled={disabled || !value.trim()}
+            className={cn(
+              "mb-0.5 size-8 shrink-0",
+              canSend && "rounded-md shadow-none",
+            )}
+            disabled={!canSend}
             onClick={handleSubmit}
           >
             <Send className="size-[18px]" strokeWidth={1.75} />

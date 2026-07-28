@@ -37,13 +37,13 @@ export function JoinWorkspaceScreen({
       )}
     >
       <div className="mb-8 flex items-center gap-2">
-        <Layers className="size-6 text-ink" strokeWidth={1.75} />
-        <span className="font-display text-2xl font-bold leading-[28.8px] tracking-[-0.6px] text-ink">
+        <Layers className="size-6 text-brand-600" strokeWidth={1.75} />
+        <span className="font-display text-2xl font-bold leading-[28.8px] tracking-[-0.6px] text-brand-900">
           Huddle
         </span>
       </div>
 
-      <div className="w-full max-w-[420px] rounded-lg border border-hairline-frost-50 bg-paper p-8 shadow-[0px_8px_24px_rgba(0,0,0,0.06)]">
+      <div className="w-full max-w-[420px] rounded-lg border border-hairline bg-paper p-8 shadow-[0px_12px_32px_rgba(15,39,68,0.1)]">
         <div className="mb-6 flex flex-col gap-1">
           <h1 className="text-base font-medium leading-6 text-ink">
             Join a workspace
@@ -83,7 +83,7 @@ export function JoinWorkspaceScreen({
           <button
             type="button"
             onClick={onSignIn}
-            className="text-ink underline-offset-4 hover:underline"
+            className="font-medium text-brand-700 underline-offset-4 hover:underline"
           >
             Sign in
           </button>

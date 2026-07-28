@@ -24,18 +24,17 @@ export function Navbar({
     <header
       className={cn(
         "fixed inset-x-0 top-0 z-50",
-        "border-b border-hairline-frost bg-surface-frost backdrop-blur-[6px]",
-        "shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]",
+        "border-b border-hairline-frost bg-surface-frost backdrop-blur-md",
+        "shadow-[0px_1px_2px_0px_rgba(15,23,42,0.04)]",
         className,
       )}
     >
       <div className="mx-auto w-full max-w-[1280px] px-6 py-2">
         <div className="flex items-center justify-between">
-          {/* Logo + nav links — gap 48px in Figma */}
           <div className="flex items-center gap-12">
             <a
               href="/"
-              className="font-display text-2xl font-bold leading-[28.8px] tracking-[-0.6px] text-ink"
+              className="font-display text-2xl font-bold leading-[28.8px] tracking-[-0.6px] text-brand-900"
             >
               Huddle
             </a>
@@ -53,8 +52,8 @@ export function Navbar({
                     className={cn(
                       "text-base leading-6 transition-colors",
                       isActive
-                        ? "border-b-2 border-ink pb-[6px] font-bold text-ink"
-                        : "pb-1 font-normal text-text-subtle hover:text-ink",
+                        ? "border-b-2 border-brand pb-[6px] font-bold text-brand-800"
+                        : "pb-1 font-normal text-text-subtle hover:text-brand-700",
                     )}
                   >
                     {link.label}
@@ -64,12 +63,11 @@ export function Navbar({
             </nav>
           </div>
 
-          {/* Sign in + CTA — gap 16px in Figma */}
           <div className="flex items-center gap-4">
             <button
               type="button"
               onClick={onSignIn}
-              className="text-base leading-6 text-text-subtle transition-colors hover:text-ink"
+              className="text-base leading-6 text-text-subtle transition-colors hover:text-brand-700"
             >
               Sign in
             </button>

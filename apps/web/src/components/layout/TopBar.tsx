@@ -29,7 +29,7 @@ export function TopBar({
     <header
       className={cn(
         "flex shrink-0 items-center justify-between",
-        "border-b border-hairline bg-surface-2",
+        "border-b border-hairline bg-paper",
         "px-4 pb-[17px] pt-4",
         className,
       )}
@@ -39,7 +39,7 @@ export function TopBar({
           aria-hidden
           className={cn(
             "size-2 shrink-0 rounded-full",
-            isOnline ? "bg-signal" : "bg-text-placeholder",
+            isOnline ? "bg-signal shadow-[0_0_0_3px_rgba(16,185,129,0.2)]" : "bg-text-placeholder",
           )}
         />
         <h1 className="text-base font-medium leading-6 text-ink">

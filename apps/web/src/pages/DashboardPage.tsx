@@ -111,7 +111,7 @@ export function DashboardPage({
           endContent={<ConnectionBadge status="connected" />}
           onSearch={() => undefined}
           onInfo={() => undefined}
-          className="border-hairline bg-surface-frost/70 backdrop-blur-[6px]"
+          className="border-hairline bg-paper"
         />
 
         <div className="flex min-h-0 flex-1 flex-col bg-surface-lowest">

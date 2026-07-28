@@ -55,7 +55,7 @@ export function MessageList({
           {message.dateLabel && (
             <div className="mb-12 flex items-center justify-center">
               <div className="h-px w-[100px] max-w-[100px] bg-hairline-strong" />
-              <span className="px-2 font-mono text-[10px] uppercase leading-[15px] text-ink">
+              <span className="px-2 font-mono text-[10px] uppercase leading-[15px] text-text-muted">
                 {message.dateLabel}
               </span>
               <div className="h-px w-[100px] max-w-[100px] bg-hairline-strong" />

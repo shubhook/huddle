@@ -108,9 +108,10 @@ export function SignupForm({
             type="submit"
             disabled={isSubmitting}
             className={cn(
-              "flex h-11 w-full items-center justify-center rounded bg-ink",
-              "text-base font-medium leading-6 text-text-on-ink",
-              "transition-colors hover:bg-ink/90",
+              "flex h-11 w-full items-center justify-center rounded-md bg-brand",
+              "text-base font-medium leading-6 text-text-on-brand",
+              "shadow-[0_1px_2px_rgba(37,99,235,0.2)]",
+              "transition-colors hover:bg-brand-700",
               "disabled:pointer-events-none disabled:opacity-50",
             )}
           >
@@ -119,11 +120,11 @@ export function SignupForm({
         </div>
       </form>
 
-      <div className="border-t border-hairline-frost bg-paper px-4 py-4">
+      <div className="border-t border-hairline bg-paper px-4 py-4">
         <button
           type="button"
           onClick={onSignIn}
-          className="mx-auto flex items-center gap-1 text-[13px] leading-[18.2px] text-text-subtle transition-colors hover:text-ink"
+          className="mx-auto flex items-center gap-1 text-[13px] leading-[18.2px] text-text-subtle transition-colors hover:text-brand-700"
         >
           Already have an account? Sign in
           <ArrowRight className="size-4" strokeWidth={1.75} />

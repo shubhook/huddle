@@ -48,7 +48,7 @@ export function CreateWorkspaceModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/20 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-brand-950/30 p-4 backdrop-blur-[2px]"
       role="presentation"
       onClick={onClose}
     >
@@ -57,15 +57,15 @@ export function CreateWorkspaceModal({
         aria-modal="true"
         aria-labelledby="create-workspace-title"
         className={cn(
-          "w-full max-w-[448px] overflow-hidden rounded-md border border-hairline bg-paper shadow-[0px_8px_24px_0px_rgba(0,0,0,0.06)]",
+          "w-full max-w-[448px] overflow-hidden rounded-lg border border-hairline bg-paper shadow-[0px_12px_32px_0px_rgba(15,39,68,0.12)]",
           className,
         )}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-hairline px-6 pb-[17px] pt-4">
           <div className="flex items-center gap-2">
-            <Layers className="size-6 text-ink" strokeWidth={1.75} />
-            <span className="font-display text-2xl font-semibold leading-[28.8px] tracking-[-0.96px] text-ink">
+            <Layers className="size-6 text-brand-600" strokeWidth={1.75} />
+            <span className="font-display text-2xl font-semibold leading-[28.8px] tracking-[-0.96px] text-brand-900">
               Huddle
             </span>
           </div>
@@ -74,13 +74,13 @@ export function CreateWorkspaceModal({
             <span
               className={cn(
                 "size-2 rounded-xl",
-                step === 1 ? "bg-ink" : "border border-text-muted",
+                step === 1 ? "bg-brand" : "border border-hairline-strong",
               )}
             />
             <span
               className={cn(
                 "size-2 rounded-xl",
-                step === 2 ? "bg-ink" : "border border-text-muted",
+                step === 2 ? "bg-brand" : "border border-hairline-strong",
               )}
             />
           </div>
@@ -127,8 +127,8 @@ export function CreateWorkspaceModal({
                     className={cn(
                       "rounded-md border bg-surface-2 px-[17px] py-[9px] text-left transition-colors",
                       isSelected
-                        ? "border-hairline-strong shadow-[0px_0px_0px_1px_#000000]"
-                        : "border-hairline hover:border-hairline-strong",
+                        ? "border-brand bg-brand-50 ring-1 ring-brand"
+                        : "border-hairline hover:border-brand-200",
                     )}
                   >
                     <span className="block font-mono text-[13px] leading-[19.5px] text-ink">

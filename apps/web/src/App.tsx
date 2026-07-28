@@ -81,7 +81,7 @@ export function App() {
           }}
         />
         {workspaceStep === "invite" && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/20 p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-950/30 p-4 backdrop-blur-[2px]">
             <InviteLinkPanel
               workspaceName={workspaceName}
               inviteUrl={inviteUrl}

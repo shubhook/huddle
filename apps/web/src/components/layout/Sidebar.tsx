@@ -30,7 +30,7 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        "flex w-[240px] shrink-0 flex-col border-r border-hairline bg-paper",
+        "flex w-[240px] shrink-0 flex-col bg-sidebar text-sidebar-foreground",
         className,
       )}
     >
@@ -40,7 +40,9 @@ export function Sidebar({
       />
 
       <div className="flex flex-1 flex-col overflow-y-auto py-3">
-        <p className="px-4 pb-2 font-mono-label text-text-muted">Channels</p>
+        <p className="px-4 pb-2 font-mono-label text-sidebar-muted">
+          Channels
+        </p>
 
         <ul className="flex flex-col gap-0.5 px-2">
           {channels.map((channel) => {
@@ -53,8 +55,8 @@ export function Sidebar({
                   className={cn(
                     "w-full rounded-md px-3 py-2 text-left font-mono text-sm leading-5 transition-colors",
                     isActive
-                      ? "border-l-2 border-ink bg-surface-2 pl-[10px] font-medium text-ink"
-                      : "border-l-2 border-transparent text-text-muted hover:text-ink",
+                      ? "bg-sidebar-active font-medium text-white"
+                      : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-foreground",
                   )}
                 >
                   # {channel.name}
@@ -66,12 +68,12 @@ export function Sidebar({
       </div>
 
       {username && (
-        <div className="flex items-center justify-between gap-2 border-t border-hairline px-4 py-3">
-          <span className="truncate text-sm text-text-muted">{username}</span>
+        <div className="flex items-center justify-between gap-2 border-t border-sidebar-border px-4 py-3">
+          <span className="truncate text-sm text-sidebar-muted">{username}</span>
           <button
             type="button"
             onClick={onLogout}
-            className="shrink-0 text-sm text-text-subtle transition-colors hover:text-ink"
+            className="shrink-0 text-sm text-sidebar-muted transition-colors hover:text-white"
           >
             Sign out
           </button>

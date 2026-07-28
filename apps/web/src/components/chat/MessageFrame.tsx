@@ -17,9 +17,9 @@ interface MessageFrameProps {
 }
 
 const AVATAR_TONE_CLASSES: Record<AvatarTone, string> = {
-  default: "bg-transparent text-ink",
-  muted: "bg-window-min text-ink",
-  subtle: "bg-text-muted text-ink",
+  default: "bg-brand-100 text-brand-800",
+  muted: "bg-brand-100 text-brand-800",
+  subtle: "bg-surface-2 text-text-muted",
 };
 
 function deriveInitials(sender: string): string {
@@ -31,7 +31,7 @@ function deriveInitials(sender: string): string {
 
 function MetadataPart({ children }: { children: ReactNode }) {
   return (
-    <span className="font-mono text-xs font-medium leading-3 tracking-[0.24px] text-ink">
+    <span className="font-mono text-xs font-medium leading-3 tracking-[0.24px] text-text-muted">
       {children}
     </span>
   );
@@ -48,7 +48,9 @@ function MetadataStrip({ sender, channel, timestamp }: MetadataStripProps) {
 
   return (
     <div className="flex items-center">
-      <MetadataPart>{sender}</MetadataPart>
+      <span className="font-mono text-xs font-semibold leading-3 tracking-[0.24px] text-brand-800">
+        {sender}
+      </span>
       <span className="pl-1">
         <MetadataPart>·</MetadataPart>
       </span>
@@ -100,7 +102,6 @@ export function MessageFrame({
       className={cn("flex w-full items-start", className)}
       aria-label={isGrouped ? `Message from ${sender}` : undefined}
     >
-      {/* Avatar column — 32px wide, top-padded 24px in full state */}
       <div
         className={cn(
           "w-8 shrink-0",
@@ -110,7 +111,6 @@ export function MessageFrame({
         {!isGrouped && <MessageAvatar sender={sender} tone={avatarTone} />}
       </div>
 
-      {/* Content column — 16px left padding per Figma */}
       <div className="min-w-0 flex-1 pl-4">
         <div className="flex flex-col gap-1">
           {!isGrouped && (
@@ -124,12 +124,12 @@ export function MessageFrame({
           <div
             className={cn(
               "flex w-full flex-col gap-2",
-              "rounded border border-[#e5e7eb] bg-paper p-[17px]",
-              "shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]",
+              "rounded-md border border-hairline bg-paper p-[17px]",
+              "shadow-[0px_1px_2px_0px_rgba(15,23,42,0.04)]",
             )}
           >
             {codeBlock && (
-              <div className="rounded-[2px] border border-[#e5e7eb] bg-surface-lowest p-[5px]">
+              <div className="rounded-[2px] border border-hairline bg-surface-lowest p-[5px]">
                 <p className="font-mono text-[13px] leading-[19.5px] text-text-muted">
                   {codeBlock}
                 </p>

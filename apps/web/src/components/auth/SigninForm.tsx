@@ -77,7 +77,7 @@ export function SigninForm({
               <button
                 type="button"
                 onClick={onForgotPassword}
-                className="text-[13px] leading-[18.2px] text-text-subtle transition-colors hover:text-ink"
+                className="text-[13px] leading-[18.2px] text-text-subtle transition-colors hover:text-brand-700"
               >
                 Forgot password?
               </button>
@@ -94,9 +94,10 @@ export function SigninForm({
           type="submit"
           disabled={isSubmitting}
           className={cn(
-            "w-full rounded bg-ink px-4 py-[10px]",
-            "text-sm leading-[21px] text-text-on-ink",
-            "transition-colors hover:bg-ink/90",
+            "w-full rounded-md bg-brand px-4 py-[10px]",
+            "text-sm font-medium leading-[21px] text-text-on-brand",
+            "shadow-[0_1px_2px_rgba(37,99,235,0.2)]",
+            "transition-colors hover:bg-brand-700",
             "disabled:pointer-events-none disabled:opacity-50",
           )}
         >

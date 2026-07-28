@@ -5,12 +5,10 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Huddle buttons — two shapes pulled from Figma:
- * - `ink`     : solid ink button (50px hero / 40px nav)
- * - `outline` : hairline-bordered transparent button (50px hero "Documentation")
- * - `ghost`   : icon-only text-graphite (chat header)
- *
- * Sizes match Figma: `hero` = 50h, `nav` = 40h, `default` = 36h, `sm` = 32h, `icon` = 26h.
+ * Huddle buttons — brand-blue primary with quiet secondaries.
+ * - `ink`     : solid brand CTA (kept name for call-site compatibility)
+ * - `outline` : hairline-bordered transparent button
+ * - `ghost`   : icon-only / text actions
  */
 const buttonVariants = cva(
   [
@@ -19,35 +17,32 @@ const buttonVariants = cva(
     "transition-colors",
     "disabled:pointer-events-none disabled:opacity-50",
     "[&_svg]:pointer-events-none [&_svg]:shrink-0",
-    "outline-none focus-visible:ring-2 focus-visible:ring-ink/30",
+    "outline-none focus-visible:ring-2 focus-visible:ring-brand-500/35",
   ].join(" "),
   {
     variants: {
       variant: {
-        // Solid ink — primary action (Quick Start, Get started)
+        // Solid brand — primary action (Quick Start, Get started, Sign in)
         ink:
-          "bg-ink text-text-on-ink hover:bg-ink/90 active:bg-ink/95",
-        // Hairline border on transparent — secondary (Documentation)
+          "bg-brand text-text-on-brand hover:bg-brand-700 active:bg-brand-800 shadow-[0_1px_2px_rgba(37,99,235,0.2)]",
+        // Hairline border — secondary (Documentation)
         outline:
-          "bg-transparent text-ink border border-hairline hover:bg-surface-2",
+          "bg-paper text-ink border border-hairline hover:border-brand-200 hover:bg-brand-50",
         // Text-only — chat header / message input icon buttons
         ghost:
-          "bg-transparent text-text-subtle hover:text-ink",
-        // shadcn-style fallbacks so the rest of the design system still works
+          "bg-transparent text-text-subtle hover:text-brand-700 hover:bg-brand-50",
         default:
-          "bg-ink text-text-on-ink hover:bg-ink/90",
+          "bg-brand text-text-on-brand hover:bg-brand-700 shadow-[0_1px_2px_rgba(37,99,235,0.2)]",
         secondary:
-          "bg-surface-2 text-ink hover:bg-surface-2/80 border border-hairline",
+          "bg-surface-2 text-ink hover:bg-brand-50 border border-hairline",
         link:
-          "text-ink underline-offset-4 hover:underline",
+          "text-brand-700 underline-offset-4 hover:underline hover:text-brand-800",
         destructive:
-          "bg-destructive text-text-on-ink hover:bg-destructive/90",
+          "bg-destructive text-text-on-brand hover:bg-destructive/90",
       },
       size: {
-        // Hero CTA — 50px tall, 24/13 padding
-        hero: "h-[50px] px-6 py-[13px] rounded-md text-base",
-        // Top nav CTA — 40px tall, 16/8 padding
-        nav: "h-10 px-4 py-2 rounded-md text-base",
+        hero: "h-[50px] px-6 py-[13px] rounded-md text-base font-medium",
+        nav: "h-10 px-4 py-2 rounded-md text-base font-medium",
         default: "h-9 px-4 py-2",
         sm: "h-8 rounded-md px-3 text-sm",
         icon: "h-[26px] w-5 p-0 rounded-md",

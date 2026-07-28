@@ -35,7 +35,7 @@ export function GithubAuthButton({
         type="button"
         onClick={() => startGithubLogin()}
         className={cn(
-          "flex w-full items-center justify-center gap-2.5 border border-hairline bg-paper text-ink transition-colors hover:bg-surface-2",
+          "flex w-full items-center justify-center gap-2.5 border border-hairline bg-paper text-ink transition-colors hover:border-brand-200 hover:bg-brand-50",
           variant === "signin" &&
             "rounded bg-transparent px-4 py-[10px] text-sm leading-[21px]",
           variant === "signup" &&

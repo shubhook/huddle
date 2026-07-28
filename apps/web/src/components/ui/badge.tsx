@@ -4,10 +4,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Huddle badge — used for the hero status pill and the channel-online pill.
- *
- *   pill  : bordered surface-2 chip with mono label, e.g. "v0.1 · WebSocket layer live"
- *   plain : inline mono label with leading dot, e.g. "# engineering-deployments"
+ * Huddle badge — hero status pill and channel-online pill.
  */
 const badgeVariants = cva(
   "inline-flex items-center gap-2 whitespace-nowrap",
@@ -15,13 +12,13 @@ const badgeVariants = cva(
     variants: {
       variant: {
         pill: [
-          "rounded-xl border border-hairline bg-surface-2",
+          "rounded-xl border border-brand-100 bg-brand-50",
           "px-[13px] py-[7px]",
-          "font-mono-label text-text-muted normal-case tracking-[0.24px]",
+          "font-mono-label text-brand-800 normal-case tracking-[0.24px]",
         ].join(" "),
         plain: "font-mono-label text-text-muted normal-case tracking-[0.24px]",
         signal: [
-          "rounded-xl border border-hairline bg-surface-2",
+          "rounded-xl border border-hairline bg-paper",
           "px-[13px] py-[7px]",
         ].join(" "),
       },

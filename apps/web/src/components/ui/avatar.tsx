@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 const avatarVariants = cva(
   [
     "relative flex shrink-0 items-center justify-center overflow-hidden",
-    "rounded-full bg-surface-2 text-ink",
+    "rounded-full bg-brand-100 text-brand-800",
     "font-medium select-none",
   ].join(" "),
   {

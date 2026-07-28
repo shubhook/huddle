@@ -48,7 +48,7 @@ function HeroMockMessage({ meta, content, variant, mono }: HeroMockMessage) {
       <div
         className={cn(
           "max-w-[768px] rounded-md border border-hairline p-[9px]",
-          variant === "paper" ? "bg-paper" : "bg-surface-2",
+          variant === "paper" ? "bg-paper" : "bg-brand-50/80",
         )}
       >
         <p
@@ -70,18 +70,24 @@ export function Hero({ className, onQuickStart, onDocumentation }: HeroProps) {
     <section
       id="preview"
       className={cn(
-        "flex w-full flex-col items-center px-8 pb-24 pt-[96px]",
+        "relative flex w-full flex-col items-center overflow-hidden px-8 pb-24 pt-[96px]",
         className,
       )}
     >
-      <div className="mx-auto flex w-full max-w-[1280px] flex-col items-center px-8">
-        <div className="mb-8 rounded-xl border border-hairline bg-surface-2 px-[13px] py-[7px]">
+      {/* Soft brand wash — restrained, not gradient slop */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-[radial-gradient(ellipse_at_50%_0%,rgba(37,99,235,0.08),transparent_65%)]"
+      />
+
+      <div className="relative mx-auto flex w-full max-w-[1280px] flex-col items-center px-8">
+        <div className="mb-8 rounded-xl border border-brand-100 bg-brand-50 px-[13px] py-[7px]">
           <div className="flex items-center gap-2">
             <span
               aria-hidden
-              className="size-1.5 rounded-[3px] bg-signal"
+              className="size-1.5 rounded-[3px] bg-signal shadow-[0_0_0_3px_rgba(16,185,129,0.2)]"
             />
-            <span className="font-mono text-xs font-medium tracking-[0.24px] text-ink">
+            <span className="font-mono text-xs font-medium tracking-[0.24px] text-brand-800">
               v0.1 · WebSocket layer live
             </span>
           </div>
@@ -111,16 +117,16 @@ export function Hero({ className, onQuickStart, onDocumentation }: HeroProps) {
         </div>
 
         <div className="mt-24 w-full px-6 md:px-24">
-          <div className="mx-auto flex h-[500px] w-full max-w-[1024px] flex-col overflow-hidden rounded-lg border border-hairline bg-paper shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]">
-            <TopBar channelName="engineering-deployments" />
+          <div className="mx-auto flex h-[500px] w-full max-w-[1024px] flex-col overflow-hidden rounded-lg border border-hairline bg-paper shadow-[0_8px_30px_rgba(30,58,95,0.08),0_1px_2px_rgba(15,23,42,0.04)]">
+            <TopBar channelName="engineering-deployments" className="bg-paper" />
 
-            <div className="flex flex-1 flex-col gap-6 overflow-auto p-6">
+            <div className="flex flex-1 flex-col gap-6 overflow-auto bg-surface-lowest p-6">
               {HERO_MESSAGES.map((message) => (
                 <HeroMockMessage key={message.meta} {...message} />
               ))}
             </div>
 
-            <div className="border-t border-hairline px-4 pb-4 pt-[17px]">
+            <div className="border-t border-hairline bg-paper px-4 pb-4 pt-[17px]">
               <div className="flex items-center gap-2 rounded-md border border-hairline bg-surface-2 px-[13px] py-[9px]">
                 <Paperclip
                   className="size-5 shrink-0 text-text-subtle"
@@ -136,8 +142,13 @@ export function Hero({ className, onQuickStart, onDocumentation }: HeroProps) {
                 <Button variant="ghost" size="icon" aria-label="Search">
                   <Search className="size-5" strokeWidth={1.75} />
                 </Button>
-                <Button variant="ghost" size="icon" aria-label="Send message">
-                  <Send className="size-5" strokeWidth={1.75} />
+                <Button
+                  variant="ink"
+                  size="icon"
+                  aria-label="Send message"
+                  className="size-8 shrink-0 rounded-md shadow-none"
+                >
+                  <Send className="size-4" strokeWidth={1.75} />
                 </Button>
               </div>
             </div>

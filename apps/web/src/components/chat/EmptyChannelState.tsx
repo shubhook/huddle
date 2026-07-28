@@ -22,8 +22,8 @@ export function EmptyChannelState({
         className,
       )}
     >
-      <div className="flex size-12 items-center justify-center rounded-xl border border-hairline bg-surface-2">
-        <Hash className="size-6 text-text-muted" strokeWidth={1.75} />
+      <div className="flex size-12 items-center justify-center rounded-xl border border-brand-100 bg-brand-50">
+        <Hash className="size-6 text-brand-600" strokeWidth={1.75} />
       </div>
       <h2 className="text-base font-medium leading-6 text-ink">
         Welcome to {label}

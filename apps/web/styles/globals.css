@@ -4,11 +4,24 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ----------------------------------------------------------------
-   Huddle design tokens — pulled from Figma (J55mZ7sCvKCFsmpuet8asv)
-   Names follow the Figma color/text style names, in kebab-case.
+   Huddle design tokens — blue brand system (Slack-informed patterns)
+   Cool neutrals + brand blue scale. Ink stays near-black for text.
    ---------------------------------------------------------------- */
 
 @theme inline {
+  /* brand scale */
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+  --color-brand-950: var(--brand-950);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+
   /* surfaces */
   --color-ink: var(--ink);
   --color-paper: var(--paper);
@@ -27,94 +40,123 @@
   --color-text-subtle: var(--text-subtle);
   --color-text-placeholder: var(--text-placeholder);
   --color-text-on-ink: var(--text-on-ink);
+  --color-text-on-brand: var(--text-on-brand);
 
   /* signal / status */
   --color-signal: var(--signal);
+  --color-warning: var(--warning);
   --color-destructive: var(--destructive);
   --color-window-min: var(--window-min);
   --color-surface-frost: var(--surface-frost);
   --color-surface-container: var(--surface-container);
   --color-hairline-frost-50: var(--hairline-frost-50);
 
-  /* raw shades preserved from shadcn defaults, in case we use them later */
+  /* sidebar chrome (product shell) */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-border: var(--sidebar-border);
+
+  /* shadcn aliases */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--paper);
   --color-card-foreground: var(--text);
   --color-popover: var(--paper);
   --color-popover-foreground: var(--text);
-  --color-primary: var(--ink);
-  --color-primary-foreground: var(--text-on-ink);
+  --color-primary: var(--brand);
+  --color-primary-foreground: var(--text-on-brand);
   --color-secondary: var(--surface-2);
   --color-secondary-foreground: var(--text);
   --color-muted: var(--surface-2);
   --color-muted-foreground: var(--text-muted);
-  --color-accent: var(--surface-2);
-  --color-accent-foreground: var(--text);
+  --color-accent: var(--brand-50);
+  --color-accent-foreground: var(--brand-800);
   --color-input: var(--hairline);
-  --color-ring: var(--hairline-strong);
+  --color-ring: var(--brand-500);
   --color-border: var(--hairline);
-  --color-destructive-foreground: var(--text-on-ink);
+  --color-destructive-foreground: var(--text-on-brand);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  /* Huddle font families (matches Figma font-family/font-N aliases) */
   --font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
   --font-code: "Menlo", ui-monospace, "SFMono-Regular", monospace;
 
-  /* tracking aliases — Figma letter-spacing tokens */
-  --tracking-tightest: -0.05em;   /* -3.2px on 64px hero */
-  --tracking-tighter: -0.04em;    /* -1.28px on 32px section heading */
-  --tracking-tight: -0.025em;     /* -0.6px nav logo */
-  --tracking-wide: 0.02em;        /* 0.24px mono label */
-  --tracking-wider: 0.05em;       /* 0.6px mono label uppercase */
+  --tracking-tightest: -0.05em;
+  --tracking-tighter: -0.04em;
+  --tracking-tight: -0.025em;
+  --tracking-wide: 0.02em;
+  --tracking-wider: 0.05em;
 }
 
 :root {
-  --radius: 0.5rem; /* 8px — matches chat-mockup radius in Figma */
+  --radius: 0.5rem;
 
-  /* surfaces */
-  --ink: #1a1c1c;
+  /* brand blue scale */
+  --brand-50: #eff6ff;
+  --brand-100: #dbeafe;
+  --brand-200: #bfdbfe;
+  --brand-500: #3b82f6;
+  --brand-600: #2563eb;
+  --brand-700: #1d4ed8;
+  --brand-800: #1e40af;
+  --brand-900: #1e3a5f;
+  --brand-950: #0f2744;
+  --brand: #2563eb;
+  --brand-foreground: #ffffff;
+  --text-on-brand: #ffffff;
+
+  /* surfaces — cool blue-grays */
+  --ink: #0f172a;
   --paper: #ffffff;
   --surface: #ffffff;
-  --surface-2: #f3f3f3;       /* concrete */
-  --surface-lowest: #f9f9f9;  /* alabaster — page bg */
+  --surface-2: #eef2f7;
+  --surface-lowest: #f4f7fb;
+  --surface-container: #e8edf4;
 
   /* hairlines */
-  --hairline: #e2e2e2;                    /* mercury */
-  --hairline-strong: #c7c6ca;             /* french-gray */
-  --hairline-frost: rgba(199, 198, 202, 0.3);
-  --hairline-frost-50: rgba(199, 198, 202, 0.5);
-
-  /* auth input fill — gallery */
-  --surface-container: #eeeeee;
+  --hairline: #d5deea;
+  --hairline-strong: #b8c4d4;
+  --hairline-frost: rgba(37, 99, 235, 0.12);
+  --hairline-frost-50: rgba(37, 99, 235, 0.18);
 
   /* text */
-  --text: #1a1c1c;
-  --text-muted: #5d5e66;       /* mid-gray */
-  --text-subtle: #46464a;      /* abbey */
-  --text-placeholder: #77777b; /* jumbo */
+  --text: #0f172a;
+  --text-muted: #5a6578;
+  --text-subtle: #475569;
+  --text-placeholder: #94a3b8;
   --text-on-ink: #ffffff;
 
   /* signal / status */
-  --signal: #10b981;            /* mountain-meadow */
-  --destructive: #ba1a1a;       /* thunderbird */
-  --window-min: #5f5e5f;        /* scorpion */
+  --signal: #10b981;
+  --warning: #f59e0b;
+  --destructive: #ba1a1a;
+  --window-min: #64748b;
 
-  /* frosted top nav */
-  --surface-frost: rgba(249, 249, 249, 0.7);
+  /* frosted top nav — cool white with blue cast */
+  --surface-frost: rgba(244, 247, 251, 0.82);
 
-  /* shadcn shims (light) */
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* product sidebar (Slack-like deep chrome) */
+  --sidebar: #1e3a5f;
+  --sidebar-foreground: #f8fafc;
+  --sidebar-muted: #94a3b8;
+  --sidebar-hover: rgba(255, 255, 255, 0.08);
+  --sidebar-active: #2563eb;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+
+  /* shadcn shims */
+  --background: #f4f7fb;
+  --foreground: #0f172a;
+  --border: #d5deea;
+  --input: #d5deea;
+  --ring: #3b82f6;
 }
 
 @layer base {
@@ -134,7 +176,6 @@
     font-family: var(--font-sans);
   }
 
-  /* mono label uppercase default */
   .font-mono-label {
     font-family: var(--font-mono);
     font-weight: 500;
