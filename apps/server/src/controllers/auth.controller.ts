@@ -73,11 +73,8 @@ export async function handleGithubCallback(req: Request, res: Response) {
 
         const BearerToken: string = generateToken({ userId: user.id });
 
-        res.status(200).json({
-            message: "ok",
-            token: BearerToken,
-            username: githubUser.login
-        });
+        res.cookie("jwt_token", BearerToken, { httpOnly: true });
+        res.redirect("http://localhost:3008/#/app");
     }
     catch(e) {
         console.log(e);

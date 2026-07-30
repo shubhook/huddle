@@ -14,6 +14,7 @@ import { signin } from "./lib/api";
 export function App() {
   const route = useHashRoute();
   const [workspaceName, setWorkspaceName] = useState("core-infrastructure");
+  const [workspaceId, setWorkspaceId] = useState("");
   const [workspaceStep, setWorkspaceStep] = useState<"create" | "invite" | null>(null,);
   const [signinError, setSigninError] = useState<string | undefined>();
 
@@ -68,6 +69,7 @@ export function App() {
       <>
         <DashboardPage
           workspaceName={workspaceName}
+          workspaceId={workspaceId}
           onLogout={() => navigateTo("/signin")}
           onWorkspaceClick={() => setWorkspaceStep("create")}
         />

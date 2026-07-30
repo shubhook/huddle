@@ -30,3 +30,39 @@ export async function signin(email: string, password: string) {
 
     return res.data;
 }
+
+export async function sendMessage(channelId: string, content: string) {
+    const res = await axios.post(
+      `${API_URL}/channels/${channelId}/messages`,
+      { content },
+      { withCredentials: true }
+    );
+    return res.data;
+  }
+
+  export interface WorkspaceDetails {
+    general: {
+      id: string;
+      name: string;
+      createdAt: string;
+    };
+    channels: {
+      id: string;
+      name: string;
+      workspaceId: string;
+    }[];
+    members: {
+      id: string;
+      userId: string;
+      workspaceId: string;
+      role: string;
+    }[];
+  }
+  
+  export async function getWorkspace(workspaceId: string): Promise<WorkspaceDetails> {
+    const res = await axios.get(
+      `${API_URL}/workspaces/${workspaceId}`,
+      { withCredentials: true }
+    );
+    return res.data.workspaceDetails;
+  }
