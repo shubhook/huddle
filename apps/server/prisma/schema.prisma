@@ -102,7 +102,7 @@ model WorkspaceInvites {
   id          String    @id @default(uuid())
   token       String    @unique
   workspaceId String 
-  createdId   DateTime
+  createdId   String
   expiresAt   DateTime
 
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
