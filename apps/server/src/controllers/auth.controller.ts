@@ -123,6 +123,25 @@ export async function signup(req: Request, res: Response) {
     }
 }
 
+export async function getCurrentUser(req: Request, res: Response) {
+    const user = await prisma.user.findUnique({
+        where: { id: req.userId },
+        select: { id: true, username: true, email: true }
+    });
+
+    if(!user) {
+        res.status(404).json({ message: "User not found" });
+        return;
+    }
+
+    res.status(200).json({ user });
+}
+
+export async function logout(req: Request, res: Response) {
+    res.clearCookie("jwt_token");
+    res.status(200).json({ message: "Logged out" });
+}
+
 export async function signin(req: Request, res: Response) {
     const parsedBody = signinSchema.safeParse(req.body);
 
