@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { CreateWorkspaceModal } from "@/components/workspace/CreateWorkspaceModal";
 import { InviteLinkPanel } from "@/components/workspace/InviteLinkPanel";
@@ -9,27 +9,60 @@ import { LandingPage } from "@/pages/LandingPage";
 import { SigninPage } from "@/pages/SigninPage";
 import { SignupPage } from "@/pages/SignupPage";
 import "./index.css";
-import { signin } from "./lib/api";
+import {
+  createInvite,
+  createWorkspace,
+  type CurrentUser,
+  getCurrentUser,
+  joinWorkspace,
+  logout,
+  signin,
+  signup,
+} from "./lib/api";
 
 export function App() {
   const route = useHashRoute();
   const [workspaceName, setWorkspaceName] = useState("core-infrastructure");
   const [workspaceId, setWorkspaceId] = useState("");
+  const [inviteToken, setInviteToken] = useState("");
   const [workspaceStep, setWorkspaceStep] = useState<"create" | "invite" | null>(null,);
   const [signinError, setSigninError] = useState<string | undefined>();
+  const [signupError, setSignupError] = useState<string | undefined>();
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
 
   const inviteUrl = useMemo(
-    () => `https://huddle.app/join/${workspaceName}`,
-    [workspaceName],
+    () => `https://huddle.app/join/${inviteToken}`,
+    [inviteToken],
   );
+
+  useEffect(() => {
+    getCurrentUser()
+      .then(setCurrentUser)
+      .catch(() => setCurrentUser(null))
+      .finally(() => setSessionChecked(true));
+  }, []);
+
+  useEffect(() => {
+    if (route === "/app" && sessionChecked && !currentUser) {
+      navigateTo("/signin");
+    }
+  }, [route, sessionChecked, currentUser]);
 
   if (route === "/signup") {
     return (
       <SignupPage
         onSignIn={() => navigateTo("/signin")}
+        error={signupError}
         onSubmit={async (values) => {
-          console.log("signup", values);
-          navigateTo("/workspace/create");
+          try {
+            await signup(values.username, values.email, values.password);
+            setCurrentUser(await getCurrentUser());
+            navigateTo("/workspace/create");
+          }
+          catch(err) {
+            setSignupError("Could not create account. Email may already be in use.");
+          }
         }}
       />
     );
@@ -39,9 +72,11 @@ export function App() {
     return (
       <SigninPage
         onSignUp={() => navigateTo("/signup")}
+        error={signinError}
         onSubmit={async (values) => {
           try {
-            const res = await signin(values.email, values.password);
+            await signin(values.email, values.password);
+            setCurrentUser(await getCurrentUser());
             navigateTo("/app");
           }
           catch(err) {
@@ -57,7 +92,8 @@ export function App() {
       <JoinWorkspaceScreen
         onSignIn={() => navigateTo("/signin")}
         onSubmit={async (inviteCode) => {
-          console.log("join", inviteCode);
+          const { workspaceId: joinedWorkspaceId } = await joinWorkspace(inviteCode);
+          setWorkspaceId(joinedWorkspaceId);
           navigateTo("/app");
         }}
       />
@@ -65,12 +101,19 @@ export function App() {
   }
 
   if (route === "/app") {
+    if (!sessionChecked || !currentUser) return null;
+
     return (
       <>
         <DashboardPage
+          username={currentUser.username}
           workspaceName={workspaceName}
           workspaceId={workspaceId}
-          onLogout={() => navigateTo("/signin")}
+          onLogout={async () => {
+            await logout();
+            setCurrentUser(null);
+            navigateTo("/signin");
+          }}
           onWorkspaceClick={() => setWorkspaceStep("create")}
         />
         <CreateWorkspaceModal
@@ -78,7 +121,11 @@ export function App() {
           step={1}
           onClose={() => setWorkspaceStep(null)}
           onContinue={async ({ workspaceName: name }) => {
+            const { workspaceId: newWorkspaceId } = await createWorkspace(name);
+            const { token } = await createInvite(newWorkspaceId);
             setWorkspaceName(name);
+            setWorkspaceId(newWorkspaceId);
+            setInviteToken(token);
             setWorkspaceStep("invite");
           }}
         />
@@ -112,7 +159,11 @@ export function App() {
             open
             step={1}
             onContinue={async ({ workspaceName: name }) => {
+              const { workspaceId: newWorkspaceId } = await createWorkspace(name);
+              const { token } = await createInvite(newWorkspaceId);
               setWorkspaceName(name);
+              setWorkspaceId(newWorkspaceId);
+              setInviteToken(token);
               setWorkspaceStep("invite");
             }}
           />
