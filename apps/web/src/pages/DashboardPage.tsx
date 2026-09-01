@@ -10,40 +10,34 @@ import type { ChatMessage } from "@/types";
 const INITIAL_CHANNELS = [
   { id: "general", name: "general" },
   { id: "engineering", name: "engineering" },
-  { id: "deployments", name: "deployments" },
-  { id: "alerts", name: "alerts" },
-  { id: "logs", name: "logs" },
-  { id: "support", name: "support" },
+  { id: "random", name: "random" },
 ] as const;
 
 const INITIAL_MESSAGES: ChatMessage[] = [
   {
     id: "1",
-    sender: "system_bot",
+    sender: "maya",
     channel: "engineering",
-    timestamp: "14:30:00",
-    codeBlock: "[INFO] Deployment v2.4.1 initialized.",
-    content:
-      "All pre-flight checks passed. Initiating rolling restart of worker nodes in us-east-1.",
-    avatarTone: "default",
-    dateLabel: "TODAY",
+    timestamp: "14:30",
+    content: "Socket stayed up through the last restart. Nice.",
+    avatarTone: "muted",
+    dateLabel: "Today",
   },
   {
     id: "2",
-    sender: "alice_k",
+    sender: "jon",
     channel: "engineering",
-    timestamp: "14:31:12",
+    timestamp: "14:31",
     content:
-      "Monitoring the rollout. CPU utilization is spiking slightly on node-A but within expected tolerances. Will keep an eye on it.",
+      "Still need reconnect on the client. Closing the laptop kills the badge until you reload.",
     avatarTone: "muted",
   },
   {
     id: "3",
-    sender: "bob_r",
+    sender: "maya",
     channel: "engineering",
-    timestamp: "14:33:45",
-    content:
-      "Looks good from my end. Can someone review PR #402 when they have a minute? It addresses the minor UI glitch reported yesterday.",
+    timestamp: "14:33",
+    content: "Yeah. Heartbeats next, then Redis if we ever run two API processes.",
     avatarTone: "muted",
   },
 ];
@@ -56,8 +50,8 @@ interface DashboardPageProps {
 }
 
 export function DashboardPage({
-  username = "johndoe",
-  workspaceName = "engineering",
+  username = "you",
+  workspaceName = "studio",
   onLogout,
   onWorkspaceClick,
 }: DashboardPageProps) {
@@ -67,7 +61,7 @@ export function DashboardPage({
   const activeChannel = useMemo(
     () =>
       INITIAL_CHANNELS.find((channel) => channel.id === activeChannelId) ??
-      INITIAL_CHANNELS[1],
+      INITIAL_CHANNELS[0],
     [activeChannelId],
   );
 
@@ -77,8 +71,11 @@ export function DashboardPage({
   );
 
   function handleSend(content: string) {
-    const now = new Date();
-    const timestamp = now.toLocaleTimeString("en-GB", { hour12: false });
+    const timestamp = new Date().toLocaleTimeString("en-GB", {
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
     setMessages((current) => [
       ...current,
@@ -94,7 +91,7 @@ export function DashboardPage({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-surface-lowest">
+    <div className="flex h-screen overflow-hidden">
       <Sidebar
         workspaceName={workspaceName}
         channels={[...INITIAL_CHANNELS]}
@@ -105,16 +102,13 @@ export function DashboardPage({
         onLogout={onLogout}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col bg-surface/50">
         <TopBar
           channelName={activeChannel.name}
           endContent={<ConnectionBadge status="connected" />}
-          onSearch={() => undefined}
-          onInfo={() => undefined}
-          className="border-hairline bg-paper"
         />
 
-        <div className="flex min-h-0 flex-1 flex-col bg-surface-lowest">
+        <div className="flex min-h-0 flex-1 flex-col">
           <MessageList
             messages={channelMessages}
             channelName={activeChannel.name}

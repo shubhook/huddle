@@ -1,4 +1,4 @@
-import { Check, Copy, Link2 } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -35,45 +35,33 @@ export function InviteLinkPanel({
   return (
     <div
       className={cn(
-        "w-full max-w-[448px] overflow-hidden rounded-lg border border-hairline bg-paper shadow-[0px_12px_32px_0px_rgba(15,39,68,0.12)]",
+        "w-full max-w-[400px] overflow-hidden rounded-xl border border-hairline bg-paper",
         className,
       )}
     >
-      <div className="flex items-center justify-between border-b border-hairline px-6 pb-[17px] pt-4">
-        <div className="flex items-center gap-2">
-          <Link2 className="size-6 text-brand-600" strokeWidth={1.75} />
-          <span className="font-display text-2xl font-semibold leading-[28.8px] tracking-[-0.96px] text-brand-900">
-            Huddle
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1" aria-hidden>
-          <span className="size-2 rounded-xl border border-hairline-strong" />
-          <span className="size-2 rounded-xl bg-brand" />
-        </div>
+      <div className="border-b border-hairline px-5 py-3.5">
+        <span className="font-display text-lg font-medium tracking-tight text-brand-900">
+          Huddle
+        </span>
       </div>
 
-      <div className="p-6">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-base font-medium leading-6 text-ink">
-            Invite your team
-          </h1>
-          <p className="text-[13px] leading-[18.2px] text-text-muted">
-            Share this link to give teammates access to{" "}
-            <span className="font-mono text-ink">{workspaceName}</span>.
-          </p>
-        </div>
+      <div className="p-5">
+        <h1 className="text-sm font-medium text-ink">Invite your team</h1>
+        <p className="mt-1 text-xs leading-relaxed text-text-muted">
+          Share this link so people can join{" "}
+          <span className="font-medium text-ink">{workspaceName}</span>.
+        </p>
 
-        <div className="pt-6">
-          <label className="font-mono text-xs font-medium uppercase tracking-[0.24px] text-text-muted">
-            Invite Link
+        <div className="pt-5">
+          <label className="font-mono text-[11px] font-medium uppercase tracking-[0.06em] text-text-muted">
+            Invite link
           </label>
-          <div className="mt-2 flex items-center gap-2 rounded-md border border-hairline bg-surface-2 px-[17px] py-[10px]">
+          <div className="mt-1.5 flex items-center gap-2 rounded-md border border-hairline bg-surface/80 px-3 py-2">
             <input
               readOnly
               value={inviteUrl}
               aria-label="Workspace invite link"
-              className="min-w-0 flex-1 bg-transparent font-mono text-[13px] leading-[19.5px] text-ink outline-none"
+              className="min-w-0 flex-1 bg-transparent font-mono text-xs text-ink outline-none"
             />
             <Button
               type="button"
@@ -83,20 +71,20 @@ export function InviteLinkPanel({
               onClick={handleCopy}
             >
               {copied ? (
-                <Check className="size-4 text-signal" strokeWidth={1.75} />
+                <Check className="size-3.5 text-signal" strokeWidth={1.75} />
               ) : (
-                <Copy className="size-4" strokeWidth={1.75} />
+                <Copy className="size-3.5" strokeWidth={1.75} />
               )}
             </Button>
           </div>
-          <p className="pt-2 font-mono text-[13px] leading-[19.5px] text-text-placeholder">
-            Links expire after 7 days. Regenerate from workspace settings.
+          <p className="pt-2 text-xs text-text-placeholder">
+            Links expire after 7 days.
           </p>
         </div>
 
-        <div className="flex justify-end border-t border-hairline pt-6">
+        <div className="flex justify-end pt-5">
           <Button type="button" variant="ink" size="sm" onClick={onContinue}>
-            Enter Workspace
+            Enter workspace
           </Button>
         </div>
       </div>

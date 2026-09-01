@@ -17,10 +17,10 @@ export function App() {
   const [workspaceStep, setWorkspaceStep] = useState<"create" | "invite" | null>(null,);
   const [signinError, setSigninError] = useState<string | undefined>();
 
-  const inviteUrl = useMemo(
-    () => `https://huddle.app/join/${workspaceName}`,
-    [workspaceName],
-  );
+  const inviteUrl = useMemo(() => {
+    if (typeof window === "undefined") return workspaceName;
+    return `${window.location.origin}/#/join`;
+  }, [workspaceName]);
 
   if (route === "/signup") {
     return (
@@ -38,9 +38,10 @@ export function App() {
     return (
       <SigninPage
         onSignUp={() => navigateTo("/signup")}
+        error={signinError}
         onSubmit={async (values) => {
           try {
-            const res = await signin(values.email, values.password);
+            await signin(values.email, values.password);
             navigateTo("/app");
           }
           catch(err) {
@@ -81,7 +82,7 @@ export function App() {
           }}
         />
         {workspaceStep === "invite" && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-950/30 p-4 backdrop-blur-[2px]">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-950/20 p-4 backdrop-blur-[2px]">
             <InviteLinkPanel
               workspaceName={workspaceName}
               inviteUrl={inviteUrl}
@@ -98,7 +99,7 @@ export function App() {
 
   if (route === "/workspace/create") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-surface-lowest p-4">
+      <div className="flex min-h-screen items-center justify-center p-4">
         {workspaceStep === "invite" ? (
           <InviteLinkPanel
             workspaceName={workspaceName}

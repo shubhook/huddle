@@ -1,155 +1,156 @@
-import { BookOpen, Paperclip, Rocket, Search, Send } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
-import { TopBar } from "@/components/layout/TopBar";
-import { cn } from "@/lib/utils";
-
-interface HeroMockMessage {
-  meta: string;
-  content: string;
-  variant: "paper" | "surface";
-  mono?: boolean;
-}
-
-const HERO_MESSAGES: HeroMockMessage[] = [
-  {
-    meta: "system · 10:42:01 UTC",
-    content:
-      "Deployed commit 8f9a2b to production cluster. All health checks passing.",
-    variant: "paper",
-    mono: true,
-  },
-  {
-    meta: "alice_dev · 10:45:12 UTC",
-    content:
-      "Latency metrics looking good post-deploy. Seeing consistent <15ms on the WebSocket layer.",
-    variant: "surface",
-  },
-  {
-    meta: "bob_ops · 10:47:33 UTC",
-    content:
-      "Confirmed. Redis pub/sub fan-out is handling the load spike smoothly. Zero dropped messages.",
-    variant: "paper",
-  },
-];
 
 interface HeroProps {
-  className?: string;
   onQuickStart?: () => void;
-  onDocumentation?: () => void;
 }
 
-function HeroMockMessage({ meta, content, variant, mono }: HeroMockMessage) {
-  return (
-    <div className="flex w-full flex-col gap-1">
-      <p className="px-1 font-mono text-xs font-medium tracking-[0.24px] text-text-muted">
-        {meta}
-      </p>
-      <div
-        className={cn(
-          "max-w-[768px] rounded-md border border-hairline p-[9px]",
-          variant === "paper" ? "bg-paper" : "bg-brand-50/80",
-        )}
-      >
-        <p
-          className={cn(
-            mono
-              ? "font-mono text-[13px] leading-[19.5px] text-ink"
-              : "text-base leading-6 text-ink",
-          )}
-        >
-          {content}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-export function Hero({ className, onQuickStart, onDocumentation }: HeroProps) {
+export function Hero({ onQuickStart }: HeroProps) {
   return (
     <section
       id="preview"
-      className={cn(
-        "relative flex w-full flex-col items-center overflow-hidden px-8 pb-24 pt-[96px]",
-        className,
-      )}
+      className="relative isolate flex min-h-[100svh] w-full flex-col items-center overflow-hidden"
     >
-      {/* Soft brand wash — restrained, not gradient slop */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-paper" />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-[radial-gradient(ellipse_at_50%_0%,rgba(37,99,235,0.08),transparent_65%)]"
+        className="hero-grid pointer-events-none absolute inset-x-0 top-0 h-[58%]"
       />
 
-      <div className="relative mx-auto flex w-full max-w-[1280px] flex-col items-center px-8">
-        <div className="mb-8 rounded-xl border border-brand-100 bg-brand-50 px-[13px] py-[7px]">
-          <div className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className="size-1.5 rounded-[3px] bg-signal shadow-[0_0_0_3px_rgba(16,185,129,0.2)]"
-            />
-            <span className="font-mono text-xs font-medium tracking-[0.24px] text-brand-800">
-              v0.1 · WebSocket layer live
-            </span>
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[46%] overflow-hidden"
+      >
+        <div className="absolute inset-0 bg-[#d7e3ee]" />
+        <div className="absolute -inset-x-[8%] -bottom-[20%] top-0 blur-2xl">
+          <div className="absolute inset-y-[8%] left-[10%] w-[20%] rounded-3xl bg-[#2a3a4a]/80" />
+          <div className="absolute left-[34%] top-[16%] h-16 w-[40%] rounded-2xl bg-white/70" />
+          <div className="absolute left-[34%] top-[38%] h-24 w-[44%] rounded-2xl bg-white/55" />
+          <div className="absolute left-[38%] top-[62%] h-14 w-[30%] rounded-2xl bg-white/45" />
+          <div className="absolute right-[12%] top-[24%] h-20 w-[24%] rounded-2xl bg-white/50" />
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-b from-paper via-paper/65 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#243040]/25 via-transparent to-transparent" />
+      </div>
+
+      <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col items-center px-5 pb-10 pt-28 sm:pt-32">
+        <div className="hero-rise flex w-full max-w-2xl flex-col items-center text-center">
+          <h1 className="font-sans text-balance text-[2.15rem] font-semibold leading-[1.12] tracking-[-0.035em] text-ink sm:text-[3.15rem] sm:leading-[1.08]">
+            <span className="block sm:inline">Team chat that</span>{" "}
+            <em className="mt-1 block font-display text-[1.05em] font-medium italic tracking-[-0.03em] text-brand-800 sm:mt-0 sm:inline">
+              arrives as it&apos;s sent.
+            </em>
+          </h1>
+
+          <p className="mt-5 max-w-md text-pretty text-[15px] leading-relaxed text-text-muted sm:text-base">
+            Join a workspace, open a channel, and watch messages land over a
+            WebSocket — built to learn the hard parts of live chat.
+          </p>
+
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Button variant="ink" size="hero" onClick={onQuickStart}>
+              Get started free
+            </Button>
+            <button
+              type="button"
+              onClick={() => {
+                document
+                  .getElementById("how-it-works")
+                  ?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="inline-flex items-center gap-2 px-1 py-2 text-sm font-medium text-text-subtle transition-colors hover:text-ink"
+            >
+              <span
+                aria-hidden
+                className="flex size-6 items-center justify-center rounded-full border border-hairline bg-paper/80"
+              >
+                <span className="ml-0.5 border-y-[5px] border-l-[8px] border-y-transparent border-l-ink" />
+              </span>
+              See how it works
+            </button>
           </div>
         </div>
 
-        <h1 className="max-w-[896px] text-center font-display text-[64px] font-semibold leading-[70.4px] tracking-[-3.2px] text-ink">
-          Real-time infrastructure, built
-          <br />
-          for builders.
-        </h1>
-
-        <p className="mt-6 max-w-[672px] text-center text-base font-medium leading-6 text-text-muted">
-          A self-hosted, high-performance messaging layer for teams who value
-          technical honesty. No fluff, just raw throughput and transparent
-          architecture.
-        </p>
-
-        <div className="mt-12 flex flex-wrap items-center justify-center gap-4">
-          <Button variant="ink" size="hero" onClick={onQuickStart}>
-            <Rocket className="size-5" strokeWidth={1.75} />
-            Quick Start
-          </Button>
-          <Button variant="outline" size="hero" onClick={onDocumentation}>
-            <BookOpen className="size-5" strokeWidth={1.75} />
-            Documentation
-          </Button>
-        </div>
-
-        <div className="mt-24 w-full px-6 md:px-24">
-          <div className="mx-auto flex h-[500px] w-full max-w-[1024px] flex-col overflow-hidden rounded-lg border border-hairline bg-paper shadow-[0_8px_30px_rgba(30,58,95,0.08),0_1px_2px_rgba(15,23,42,0.04)]">
-            <TopBar channelName="engineering-deployments" className="bg-paper" />
-
-            <div className="flex flex-1 flex-col gap-6 overflow-auto bg-surface-lowest p-6">
-              {HERO_MESSAGES.map((message) => (
-                <HeroMockMessage key={message.meta} {...message} />
-              ))}
-            </div>
-
-            <div className="border-t border-hairline bg-paper px-4 pb-4 pt-[17px]">
-              <div className="flex items-center gap-2 rounded-md border border-hairline bg-surface-2 px-[13px] py-[9px]">
-                <Paperclip
-                  className="size-5 shrink-0 text-text-subtle"
-                  strokeWidth={1.75}
+        <div className="hero-float relative mt-12 w-full max-w-4xl overflow-hidden rounded-2xl border border-white/70 bg-paper shadow-[0_28px_80px_-28px_rgba(36,48,64,0.45),0_1px_0_rgba(255,255,255,0.8)_inset] sm:mt-14">
+          <div className="flex h-[min(52vh,420px)] min-h-[300px] w-full sm:h-[440px]">
+            <aside className="hidden w-[200px] shrink-0 flex-col bg-sidebar text-sidebar-foreground sm:flex">
+              <div className="flex items-center gap-2 border-b border-sidebar-border px-3.5 py-3">
+                <span
                   aria-hidden
-                />
-                <input
-                  readOnly
-                  aria-label="Message input preview"
-                  placeholder="Message #engineering-deployments"
-                  className="min-w-0 flex-1 bg-transparent text-sm text-text-placeholder outline-none"
-                />
-                <Button variant="ghost" size="icon" aria-label="Search">
-                  <Search className="size-5" strokeWidth={1.75} />
-                </Button>
-                <Button
-                  variant="ink"
-                  size="icon"
-                  aria-label="Send message"
-                  className="size-8 shrink-0 rounded-md shadow-none"
+                  className="flex size-5 items-center justify-center rounded-[5px] bg-sidebar-active"
                 >
-                  <Send className="size-4" strokeWidth={1.75} />
-                </Button>
+                  <span className="grid grid-cols-2 gap-0.5">
+                    <span className="size-1 rounded-[1px] bg-white/90" />
+                    <span className="size-1 rounded-[1px] bg-white/90" />
+                    <span className="size-1 rounded-[1px] bg-white/90" />
+                    <span className="size-1 rounded-[1px] bg-white/90" />
+                  </span>
+                </span>
+                <span className="font-display text-sm font-medium tracking-tight">
+                  Huddle
+                </span>
+              </div>
+              <div className="px-3 pt-4">
+                <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-sidebar-muted">
+                  Channels
+                </p>
+                <ul className="mt-2 space-y-0.5 text-[13px]">
+                  <li className="rounded-md bg-sidebar-active/90 px-2 py-1.5 text-white">
+                    <span className="text-sidebar-muted">#</span> general
+                  </li>
+                  <li className="rounded-md px-2 py-1.5 text-sidebar-muted">
+                    <span className="text-sidebar-muted">#</span> shipping
+                  </li>
+                  <li className="rounded-md px-2 py-1.5 text-sidebar-muted">
+                    <span className="text-sidebar-muted">#</span> random
+                  </li>
+                </ul>
+              </div>
+              <div className="mt-auto border-t border-sidebar-border px-3.5 py-3">
+                <p className="truncate text-xs text-sidebar-muted">you · online</p>
+              </div>
+            </aside>
+
+            <div className="flex min-w-0 flex-1 flex-col bg-surface/40">
+              <header className="flex h-11 shrink-0 items-center gap-2 border-b border-hairline bg-paper/90 px-4">
+                <span aria-hidden className="size-1.5 rounded-full bg-signal" />
+                <span className="text-sm font-medium text-ink"># general</span>
+                <span className="ml-auto font-mono text-[10px] uppercase tracking-wide text-text-placeholder">
+                  live
+                </span>
+              </header>
+
+              <div className="flex-1 space-y-5 overflow-hidden px-4 py-5 sm:px-5">
+                <div className="max-w-xl">
+                  <p className="font-mono text-[11px] text-text-placeholder">
+                    maya · 2m
+                  </p>
+                  <p className="mt-1 text-sm leading-relaxed text-ink">
+                    Anyone on the socket path for join?
+                  </p>
+                </div>
+                <div className="max-w-xl">
+                  <p className="font-mono text-[11px] text-text-placeholder">
+                    you · 1m
+                  </p>
+                  <p className="mt-1 text-sm leading-relaxed text-ink">
+                    Cookie rides the upgrade. Room is just a Map of sockets.
+                  </p>
+                </div>
+                <div className="max-w-xl">
+                  <p className="font-mono text-[11px] text-text-placeholder">
+                    huddle · just now
+                  </p>
+                  <p className="mt-1 text-sm leading-relaxed text-ink">
+                    Write to Postgres first. Then fan out. That order is the
+                    whole lesson.
+                  </p>
+                </div>
+              </div>
+
+              <div className="shrink-0 border-t border-hairline bg-paper px-4 py-3">
+                <div className="rounded-lg border border-hairline bg-surface/60 px-3 py-2.5 text-sm text-text-placeholder">
+                  Message #general
+                </div>
               </div>
             </div>
           </div>

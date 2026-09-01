@@ -40,17 +40,17 @@ export function SignupForm({
 
   return (
     <AuthCard variant="signup" className={className}>
-      <div className="border-b border-hairline-frost bg-paper px-6 pb-[25px] pt-6 text-center">
-        <h1 className="pb-1 font-display text-[32px] font-semibold leading-[38.4px] tracking-[-1.28px] text-ink">
+      <div className="border-b border-hairline px-6 py-5 text-center">
+        <h1 className="font-display text-2xl font-medium tracking-tight text-ink">
           Huddle
         </h1>
-        <p className="text-sm leading-[21px] text-text-subtle">
-          Create a new workspace account.
+        <p className="mt-1 text-xs text-text-muted">
+          Make an account, then create a workspace.
         </p>
       </div>
 
-      <form className="flex flex-col gap-4 bg-surface-lowest p-6" onSubmit={handleSubmit}>
-        <GithubAuthButton variant="signup" label="Continue with GitHub" />
+      <form className="flex flex-col gap-3.5 px-6 py-5" onSubmit={handleSubmit}>
+        <GithubAuthButton variant="signup" />
 
         <AuthField
           name="username"
@@ -72,7 +72,7 @@ export function SignupForm({
           type="email"
           label="Email"
           labelVariant="mono"
-          placeholder="john@example.com"
+          placeholder="you@example.com"
           autoComplete="email"
           icon={Mail}
           iconPosition="left"
@@ -92,42 +92,36 @@ export function SignupForm({
           icon={KeyRound}
           iconPosition="left"
           inputVariant="signup"
-          hint="Must be at least 8 characters long."
+          hint="At least 8 characters."
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           minLength={8}
           required
         />
 
-        {error && (
-          <p className="text-[13px] leading-[18.2px] text-destructive">{error}</p>
-        )}
+        {error && <p className="text-xs text-destructive">{error}</p>}
 
-        <div className="pt-2">
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className={cn(
-              "flex h-11 w-full items-center justify-center rounded-md bg-brand",
-              "text-base font-medium leading-6 text-text-on-brand",
-              "shadow-[0_1px_2px_rgba(37,99,235,0.2)]",
-              "transition-colors hover:bg-brand-700",
-              "disabled:pointer-events-none disabled:opacity-50",
-            )}
-          >
-            Create account
-          </button>
-        </div>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className={cn(
+            "mt-1 h-9 w-full rounded-md bg-brand text-sm font-medium text-text-on-brand",
+            "transition-colors hover:bg-brand-700",
+            "disabled:pointer-events-none disabled:opacity-50",
+          )}
+        >
+          Create account
+        </button>
       </form>
 
-      <div className="border-t border-hairline bg-paper px-4 py-4">
+      <div className="border-t border-hairline px-4 py-3.5">
         <button
           type="button"
           onClick={onSignIn}
-          className="mx-auto flex items-center gap-1 text-[13px] leading-[18.2px] text-text-subtle transition-colors hover:text-brand-700"
+          className="mx-auto flex items-center gap-1 text-xs text-text-muted transition-colors hover:text-ink"
         >
           Already have an account? Sign in
-          <ArrowRight className="size-4" strokeWidth={1.75} />
+          <ArrowRight className="size-3.5" strokeWidth={1.75} />
         </button>
       </div>
     </AuthCard>
