@@ -73,11 +73,8 @@ export async function handleGithubCallback(req: Request, res: Response) {
 
         const BearerToken: string = generateToken({ userId: user.id });
 
-        res.status(200).json({
-            message: "ok",
-            token: BearerToken,
-            username: githubUser.login
-        });
+        res.cookie("jwt_token", BearerToken, { httpOnly: true });
+        res.redirect("http://localhost:3008/#/app");
     }
     catch(e) {
         console.log(e);
@@ -124,6 +121,25 @@ export async function signup(req: Request, res: Response) {
         });
         return;
     }
+}
+
+export async function getCurrentUser(req: Request, res: Response) {
+    const user = await prisma.user.findUnique({
+        where: { id: req.userId },
+        select: { id: true, username: true, email: true }
+    });
+
+    if(!user) {
+        res.status(404).json({ message: "User not found" });
+        return;
+    }
+
+    res.status(200).json({ user });
+}
+
+export async function logout(req: Request, res: Response) {
+    res.clearCookie("jwt_token");
+    res.status(200).json({ message: "Logged out" });
 }
 
 export async function signin(req: Request, res: Response) {

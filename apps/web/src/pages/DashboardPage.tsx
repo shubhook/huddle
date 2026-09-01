@@ -1,50 +1,32 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { MessageList } from "@/components/chat/MessageList";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
-import type { ChatMessage } from "@/types";
+import { getMessages, getWorkspace } from "@/lib/api";
+import {
+  connectSocket,
+  disconnectSocket,
+  getConnectionStatus,
+  joinChannel,
+  leaveChannel,
+  onMessage,
+  onStatusChange,
+  sendChannelMessage,
+} from "@/lib/ws";
+import type { ChatMessage, ConnectionStatus } from "@/types";
 
-const INITIAL_CHANNELS = [
-  { id: "general", name: "general" },
-  { id: "engineering", name: "engineering" },
-  { id: "random", name: "random" },
-] as const;
-
-const INITIAL_MESSAGES: ChatMessage[] = [
-  {
-    id: "1",
-    sender: "maya",
-    channel: "engineering",
-    timestamp: "14:30",
-    content: "Socket stayed up through the last restart. Nice.",
-    avatarTone: "muted",
-    dateLabel: "Today",
-  },
-  {
-    id: "2",
-    sender: "jon",
-    channel: "engineering",
-    timestamp: "14:31",
-    content:
-      "Still need reconnect on the client. Closing the laptop kills the badge until you reload.",
-    avatarTone: "muted",
-  },
-  {
-    id: "3",
-    sender: "maya",
-    channel: "engineering",
-    timestamp: "14:33",
-    content: "Yeah. Heartbeats next, then Redis if we ever run two API processes.",
-    avatarTone: "muted",
-  },
-];
+interface Channel {
+  id: string;
+  name: string;
+}
 
 interface DashboardPageProps {
   username?: string;
   workspaceName?: string;
+  workspaceId: string;
   onLogout?: () => void;
   onWorkspaceClick?: () => void;
 }
@@ -52,50 +34,129 @@ interface DashboardPageProps {
 export function DashboardPage({
   username = "you",
   workspaceName = "studio",
+  workspaceId,
   onLogout,
   onWorkspaceClick,
 }: DashboardPageProps) {
-  const [activeChannelId, setActiveChannelId] = useState("engineering");
-  const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(
+    getConnectionStatus(),
+  );
+
+  useEffect(() => {
+    if (!workspaceId) return;
+
+    async function loadWorkspace() {
+      const workspace = await getWorkspace(workspaceId);
+      setChannels(workspace.channels);
+      setActiveChannelId(workspace.channels[0]?.id ?? null);
+    }
+    loadWorkspace();
+  }, [workspaceId]);
+
+  useEffect(() => {
+    if (!workspaceId) return;
+
+    connectSocket();
+    const unsubscribeStatus = onStatusChange(setConnectionStatus);
+
+    return () => {
+      unsubscribeStatus();
+      disconnectSocket();
+    };
+  }, [workspaceId]);
+
+  useEffect(() => {
+    const unsubscribe = onMessage((message) => {
+      if (message.type !== "new_message") return;
+      const payload = message.payload;
+
+      setMessages((current) => {
+        if (current.some((existing) => existing.id === payload.id)) {
+          return current;
+        }
+        return [
+          ...current,
+          {
+            id: payload.id,
+            sender: payload.senderUsername,
+            channel: payload.channelId,
+            timestamp: new Date(payload.createdAt).toLocaleTimeString("en-GB", {
+              hour12: false,
+            }),
+            content: payload.content,
+            avatarTone: "muted",
+          },
+        ];
+      });
+    });
+
+    return unsubscribe;
+  }, []);
 
   const activeChannel = useMemo(
     () =>
-      INITIAL_CHANNELS.find((channel) => channel.id === activeChannelId) ??
-      INITIAL_CHANNELS[0],
-    [activeChannelId],
+      channels.find((channel) => channel.id === activeChannelId) ?? channels[0],
+    [activeChannelId, channels],
   );
 
+  useEffect(() => {
+    if (!activeChannel) return;
+
+    async function loadMessages() {
+      const batch = await getMessages(activeChannel!.id);
+      const loaded: ChatMessage[] = batch
+        .slice()
+        .reverse()
+        .map((message) => ({
+          id: message.id,
+          sender: message.sender.username,
+          channel: message.channelId,
+          timestamp: new Date(message.createdAt).toLocaleTimeString("en-GB", {
+            hour12: false,
+          }),
+          content: message.content,
+          avatarTone: "muted",
+        }));
+
+      setMessages((current) => [
+        ...current.filter((message) => message.channel !== activeChannel!.id),
+        ...loaded,
+      ]);
+    }
+    loadMessages();
+  }, [activeChannel?.id]);
+
+  useEffect(() => {
+    if (connectionStatus !== "connected" || !activeChannel || !workspaceId) {
+      return;
+    }
+
+    joinChannel(activeChannel.id, workspaceId);
+
+    return () => {
+      leaveChannel(activeChannel.id);
+    };
+  }, [activeChannel?.id, workspaceId, connectionStatus]);
+
   const channelMessages = useMemo(
-    () => messages.filter((message) => message.channel === activeChannel.id),
-    [activeChannel.id, messages],
+    () => messages.filter((message) => message.channel === activeChannel?.id),
+    [activeChannel?.id, messages],
   );
 
   function handleSend(content: string) {
-    const timestamp = new Date().toLocaleTimeString("en-GB", {
-      hour12: false,
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    setMessages((current) => [
-      ...current,
-      {
-        id: crypto.randomUUID(),
-        sender: username,
-        channel: activeChannel.id,
-        timestamp,
-        content,
-        avatarTone: "muted",
-      },
-    ]);
+    if (!activeChannel || !workspaceId) return;
+    sendChannelMessage(activeChannel.id, workspaceId, content);
   }
 
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar
         workspaceName={workspaceName}
-        channels={[...INITIAL_CHANNELS]}
-        activeChannelId={activeChannelId}
+        channels={[...channels]}
+        activeChannelId={activeChannelId ?? undefined}
         username={username}
         onChannelSelect={setActiveChannelId}
         onWorkspaceClick={onWorkspaceClick}
@@ -104,17 +165,17 @@ export function DashboardPage({
 
       <div className="flex min-w-0 flex-1 flex-col bg-surface/50">
         <TopBar
-          channelName={activeChannel.name}
-          endContent={<ConnectionBadge status="connected" />}
+          channelName={activeChannel?.name ?? ""}
+          endContent={<ConnectionBadge status={connectionStatus} />}
         />
 
         <div className="flex min-h-0 flex-1 flex-col">
           <MessageList
             messages={channelMessages}
-            channelName={activeChannel.name}
+            channelName={activeChannel?.name ?? ""}
           />
           <MessageInput
-            channelName={activeChannel.name}
+            channelName={activeChannel?.name ?? ""}
             onSend={handleSend}
           />
         </div>

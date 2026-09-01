@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { AuthField } from "@/components/auth/AuthField";
 import { Button } from "@/components/ui/button";
+import { inviteCodeFromHash } from "@/lib/hashRoute";
 import { cn } from "@/lib/utils";
 
 interface JoinWorkspaceScreenProps {
@@ -11,19 +12,34 @@ interface JoinWorkspaceScreenProps {
   onSignIn?: () => void;
 }
 
+function tokenFromInviteInput(value: string): string {
+  const trimmed = value.trim();
+  const fromHash = inviteCodeFromHash(
+    trimmed.includes("#") ? trimmed.slice(trimmed.indexOf("#")) : "",
+  );
+  if (fromHash) return fromHash;
+  const joinIdx = trimmed.lastIndexOf("/join/");
+  if (joinIdx >= 0) {
+    return decodeURIComponent(trimmed.slice(joinIdx + "/join/".length));
+  }
+  return trimmed;
+}
+
 export function JoinWorkspaceScreen({
   className,
   onSubmit,
   onSignIn,
 }: JoinWorkspaceScreenProps) {
-  const [inviteCode, setInviteCode] = useState("");
+  const [inviteCode, setInviteCode] = useState(() =>
+    typeof window === "undefined" ? "" : inviteCodeFromHash(),
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setIsSubmitting(true);
     try {
-      await onSubmit?.(inviteCode.trim());
+      await onSubmit?.(tokenFromInviteInput(inviteCode));
     } finally {
       setIsSubmitting(false);
     }

@@ -18,6 +18,8 @@
     "apps/*"
   ],
   "dependencies": {
-    "axios": "^1.18.1"
+    "@types/cors": "^2.8.19",
+    "axios": "^1.18.1",
+    "cors": "^2.8.6"
   }
 }

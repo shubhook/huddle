@@ -19,7 +19,14 @@ const ROUTES: AppRoute[] = [
 
 function normalizeHash(hash: string): AppRoute {
   const path = hash.replace(/^#/, "") || "/";
+  if (path === "/join" || path.startsWith("/join/")) return "/join";
   return ROUTES.includes(path as AppRoute) ? (path as AppRoute) : "/";
+}
+
+export function inviteCodeFromHash(hash = window.location.hash): string {
+  const path = hash.replace(/^#/, "") || "/";
+  if (!path.startsWith("/join/")) return "";
+  return decodeURIComponent(path.slice("/join/".length));
 }
 
 export function navigateTo(route: AppRoute) {

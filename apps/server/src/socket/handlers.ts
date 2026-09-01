@@ -115,7 +115,8 @@ export async function handleSendMessage(ws: WebSocket, payload: ClientMessage, u
                 content: content,
                 senderId: userId,
                 channelId: channelId,
-            }
+            },
+            include: { sender: { select: { username: true } } }
         })
 
         const subscribers = channelSubscriptions.get(channelId);
@@ -127,6 +128,7 @@ export async function handleSendMessage(ws: WebSocket, payload: ClientMessage, u
                     id: response.id,
                     channelId: response.channelId,
                     senderId: response.senderId,
+                    senderUsername: response.sender.username,
                     content: response.content,
                     createdAt: response.createdAt
                 }

@@ -102,7 +102,8 @@ export async function getMessages(req: Request, res: Response) {
             channelMessages = await prisma.message.findMany({
                 where: { channelId: channelId },
                 take: 50,
-                orderBy: { createdAt: "desc" }
+                orderBy: { createdAt: "desc" },
+                include: { sender: { select: { username: true } } }
             });
         }
         else {
@@ -111,7 +112,8 @@ export async function getMessages(req: Request, res: Response) {
                 take: 50,
                 skip: 1,
                 cursor: { id: cursor },
-                orderBy: { createdAt: "desc" }
+                orderBy: { createdAt: "desc" },
+                include: { sender: { select: { username: true } } }
             });
         }
 
