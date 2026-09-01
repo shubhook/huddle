@@ -10,7 +10,6 @@ interface MessageFrameProps {
   channel: string;
   content: string;
   isGrouped: boolean;
-  /** Optional mono log line shown above body copy (system messages). */
   codeBlock?: string;
   avatarTone?: AvatarTone;
   className?: string;
@@ -31,66 +30,15 @@ function deriveInitials(sender: string): string {
 
 function MetadataPart({ children }: { children: ReactNode }) {
   return (
-    <span className="font-mono text-xs font-medium leading-3 tracking-[0.24px] text-text-muted">
+    <span className="font-mono text-[11px] font-medium text-text-placeholder">
       {children}
     </span>
-  );
-}
-
-interface MetadataStripProps {
-  sender: string;
-  channel: string;
-  timestamp: string;
-}
-
-function MetadataStrip({ sender, channel, timestamp }: MetadataStripProps) {
-  const channelLabel = channel.startsWith("#") ? channel : `#${channel}`;
-
-  return (
-    <div className="flex items-center">
-      <span className="font-mono text-xs font-semibold leading-3 tracking-[0.24px] text-brand-800">
-        {sender}
-      </span>
-      <span className="pl-1">
-        <MetadataPart>·</MetadataPart>
-      </span>
-      <span className="pl-1">
-        <MetadataPart>{channelLabel}</MetadataPart>
-      </span>
-      <span className="pl-1">
-        <MetadataPart>·</MetadataPart>
-      </span>
-      <span className="pl-1">
-        <MetadataPart>{timestamp}</MetadataPart>
-      </span>
-    </div>
-  );
-}
-
-interface MessageAvatarProps {
-  sender: string;
-  tone: AvatarTone;
-}
-
-function MessageAvatar({ sender, tone }: MessageAvatarProps) {
-  return (
-    <div
-      aria-hidden
-      className={cn(
-        "flex size-8 shrink-0 items-center justify-center rounded-xl",
-        "text-sm font-bold leading-5",
-        AVATAR_TONE_CLASSES[tone],
-      )}
-    >
-      {deriveInitials(sender)}
-    </div>
   );
 }
 
 export function MessageFrame({
   sender,
   timestamp,
-  channel,
   content,
   isGrouped,
   codeBlock,
@@ -104,40 +52,37 @@ export function MessageFrame({
     >
       <div
         className={cn(
-          "w-8 shrink-0",
-          isGrouped ? "h-0 overflow-hidden" : "h-14 pt-6",
+          "w-7 shrink-0",
+          isGrouped ? "h-0 overflow-hidden" : "pt-0.5",
         )}
       >
-        {!isGrouped && <MessageAvatar sender={sender} tone={avatarTone} />}
-      </div>
-
-      <div className="min-w-0 flex-1 pl-4">
-        <div className="flex flex-col gap-1">
-          {!isGrouped && (
-            <MetadataStrip
-              sender={sender}
-              channel={channel}
-              timestamp={timestamp}
-            />
-          )}
-
+        {!isGrouped && (
           <div
+            aria-hidden
             className={cn(
-              "flex w-full flex-col gap-2",
-              "rounded-md border border-hairline bg-paper p-[17px]",
-              "shadow-[0px_1px_2px_0px_rgba(15,23,42,0.04)]",
+              "flex size-7 items-center justify-center rounded-lg text-[11px] font-semibold",
+              AVATAR_TONE_CLASSES[avatarTone],
             )}
           >
-            {codeBlock && (
-              <div className="rounded-[2px] border border-hairline bg-surface-lowest p-[5px]">
-                <p className="font-mono text-[13px] leading-[19.5px] text-text-muted">
-                  {codeBlock}
-                </p>
-              </div>
-            )}
-            <p className="text-sm leading-[21px] text-ink">{content}</p>
+            {deriveInitials(sender)}
           </div>
-        </div>
+        )}
+      </div>
+
+      <div className="min-w-0 flex-1 pl-3">
+        {!isGrouped && (
+          <div className="mb-0.5 flex items-baseline gap-2">
+            <span className="text-sm font-medium text-ink">{sender}</span>
+            <MetadataPart>{timestamp}</MetadataPart>
+          </div>
+        )}
+
+        {codeBlock && (
+          <div className="mb-1 rounded-md border border-hairline bg-surface/80 px-2 py-1">
+            <p className="font-mono text-xs text-text-muted">{codeBlock}</p>
+          </div>
+        )}
+        <p className="text-sm leading-relaxed text-ink">{content}</p>
       </div>
     </article>
   );

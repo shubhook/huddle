@@ -1,11 +1,10 @@
-import { useMemo, useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { ConnectionBadge } from "@/components/chat/ConnectionBadge";
 import { MessageInput } from "@/components/chat/MessageInput";
 import { MessageList } from "@/components/chat/MessageList";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
-import type { ChatMessage, ConnectionStatus } from "@/types";
 import { getMessages, getWorkspace } from "@/lib/api";
 import {
   connectSocket,
@@ -17,7 +16,7 @@ import {
   onStatusChange,
   sendChannelMessage,
 } from "@/lib/ws";
-
+import type { ChatMessage, ConnectionStatus } from "@/types";
 
 interface Channel {
   id: string;
@@ -33,8 +32,8 @@ interface DashboardPageProps {
 }
 
 export function DashboardPage({
-  username = "johndoe",
-  workspaceName = "engineering",
+  username = "you",
+  workspaceName = "studio",
   workspaceId,
   onLogout,
   onWorkspaceClick,
@@ -84,10 +83,9 @@ export function DashboardPage({
             id: payload.id,
             sender: payload.senderUsername,
             channel: payload.channelId,
-            timestamp: new Date(payload.createdAt).toLocaleTimeString(
-              "en-GB",
-              { hour12: false },
-            ),
+            timestamp: new Date(payload.createdAt).toLocaleTimeString("en-GB", {
+              hour12: false,
+            }),
             content: payload.content,
             avatarTone: "muted",
           },
@@ -100,8 +98,7 @@ export function DashboardPage({
 
   const activeChannel = useMemo(
     () =>
-      channels.find((channel) => channel.id === activeChannelId) ??
-      channels[0],
+      channels.find((channel) => channel.id === activeChannelId) ?? channels[0],
     [activeChannelId, channels],
   );
 
@@ -155,7 +152,7 @@ export function DashboardPage({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-surface-lowest">
+    <div className="flex h-screen overflow-hidden">
       <Sidebar
         workspaceName={workspaceName}
         channels={[...channels]}
@@ -166,16 +163,13 @@ export function DashboardPage({
         onLogout={onLogout}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col bg-surface/50">
         <TopBar
           channelName={activeChannel?.name ?? ""}
           endContent={<ConnectionBadge status={connectionStatus} />}
-          onSearch={() => undefined}
-          onInfo={() => undefined}
-          className="border-hairline bg-paper"
         />
 
-        <div className="flex min-h-0 flex-1 flex-col bg-surface-lowest">
+        <div className="flex min-h-0 flex-1 flex-col">
           <MessageList
             messages={channelMessages}
             channelName={activeChannel?.name ?? ""}

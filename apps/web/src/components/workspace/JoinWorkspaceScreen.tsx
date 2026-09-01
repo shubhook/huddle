@@ -1,8 +1,9 @@
-import { ArrowRight, Layers } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 
 import { AuthField } from "@/components/auth/AuthField";
 import { Button } from "@/components/ui/button";
+import { inviteCodeFromHash } from "@/lib/hashRoute";
 import { cn } from "@/lib/utils";
 
 interface JoinWorkspaceScreenProps {
@@ -11,19 +12,34 @@ interface JoinWorkspaceScreenProps {
   onSignIn?: () => void;
 }
 
+function tokenFromInviteInput(value: string): string {
+  const trimmed = value.trim();
+  const fromHash = inviteCodeFromHash(
+    trimmed.includes("#") ? trimmed.slice(trimmed.indexOf("#")) : "",
+  );
+  if (fromHash) return fromHash;
+  const joinIdx = trimmed.lastIndexOf("/join/");
+  if (joinIdx >= 0) {
+    return decodeURIComponent(trimmed.slice(joinIdx + "/join/".length));
+  }
+  return trimmed;
+}
+
 export function JoinWorkspaceScreen({
   className,
   onSubmit,
   onSignIn,
 }: JoinWorkspaceScreenProps) {
-  const [inviteCode, setInviteCode] = useState("");
+  const [inviteCode, setInviteCode] = useState(() =>
+    typeof window === "undefined" ? "" : inviteCodeFromHash(),
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setIsSubmitting(true);
     try {
-      await onSubmit?.(inviteCode.trim());
+      await onSubmit?.(tokenFromInviteInput(inviteCode));
     } finally {
       setIsSubmitting(false);
     }
@@ -32,38 +48,31 @@ export function JoinWorkspaceScreen({
   return (
     <div
       className={cn(
-        "flex min-h-screen flex-col items-center justify-center bg-surface-lowest px-4 py-12",
+        "flex min-h-screen flex-col items-center justify-center px-4 py-12",
         className,
       )}
     >
-      <div className="mb-8 flex items-center gap-2">
-        <Layers className="size-6 text-brand-600" strokeWidth={1.75} />
-        <span className="font-display text-2xl font-bold leading-[28.8px] tracking-[-0.6px] text-brand-900">
-          Huddle
-        </span>
-      </div>
+      <p className="mb-6 font-display text-xl font-medium tracking-tight text-brand-900">
+        Huddle
+      </p>
 
-      <div className="w-full max-w-[420px] rounded-lg border border-hairline bg-paper p-8 shadow-[0px_12px_32px_rgba(15,39,68,0.1)]">
-        <div className="mb-6 flex flex-col gap-1">
-          <h1 className="text-base font-medium leading-6 text-ink">
-            Join a workspace
-          </h1>
-          <p className="text-[13px] leading-[18.2px] text-text-muted">
-            Enter the invite code or paste the full invite link you received from
-            a teammate.
+      <div className="w-full max-w-[380px] rounded-xl border border-hairline bg-paper/90 p-6">
+        <div className="mb-5 flex flex-col gap-1">
+          <h1 className="text-sm font-medium text-ink">Join a workspace</h1>
+          <p className="text-xs leading-relaxed text-text-muted">
+            Paste the invite link or token someone sent you.
           </p>
         </div>
 
-        <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
           <AuthField
-            label="Invite Code"
+            label="Invite"
             labelVariant="mono"
             name="invite-code"
-            placeholder="huddle.app/join/core-infrastructure"
+            placeholder="paste invite token or link"
             value={inviteCode}
             onChange={(event) => setInviteCode(event.target.value)}
             inputVariant="signup"
-            className="font-mono text-[13px]"
           />
 
           <Button
@@ -73,17 +82,17 @@ export function JoinWorkspaceScreen({
             disabled={!inviteCode.trim() || isSubmitting}
             className="w-full"
           >
-            Join Workspace
-            <ArrowRight className="size-5" strokeWidth={1.75} />
+            Join workspace
+            <ArrowRight className="size-3.5" strokeWidth={1.75} />
           </Button>
         </form>
 
-        <p className="mt-6 text-center text-[13px] leading-[18.2px] text-text-muted">
-          Already have an account?{" "}
+        <p className="mt-5 text-center text-xs text-text-muted">
+          Already signed in elsewhere?{" "}
           <button
             type="button"
             onClick={onSignIn}
-            className="font-medium text-brand-700 underline-offset-4 hover:underline"
+            className="font-medium text-brand-700 hover:text-brand-800"
           >
             Sign in
           </button>

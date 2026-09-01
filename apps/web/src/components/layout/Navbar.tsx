@@ -1,80 +1,55 @@
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-
-const NAV_LINKS = [
-  { label: "Preview", href: "#preview", active: true },
-  { label: "Features", href: "#features" },
-  { label: "Architecture", href: "#architecture" },
-] as const;
 
 interface NavbarProps {
-  className?: string;
-  activeLink?: string;
   onSignIn?: () => void;
   onGetStarted?: () => void;
 }
 
-export function Navbar({
-  className,
-  activeLink = "Preview",
-  onSignIn,
-  onGetStarted,
-}: NavbarProps) {
+export function Navbar({ onSignIn, onGetStarted }: NavbarProps) {
   return (
-    <header
-      className={cn(
-        "fixed inset-x-0 top-0 z-50",
-        "border-b border-hairline-frost bg-surface-frost backdrop-blur-md",
-        "shadow-[0px_1px_2px_0px_rgba(15,23,42,0.04)]",
-        className,
-      )}
-    >
-      <div className="mx-auto w-full max-w-[1280px] px-6 py-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-12">
-            <a
-              href="/"
-              className="font-display text-2xl font-bold leading-[28.8px] tracking-[-0.6px] text-brand-900"
-            >
-              Huddle
-            </a>
+    <header className="fixed inset-x-0 top-0 z-50 bg-paper/70 backdrop-blur-md">
+      <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between gap-4 px-5">
+        <a
+          href="/"
+          className="group inline-flex items-center gap-2 text-ink"
+          aria-label="Huddle home"
+        >
+          <span
+            aria-hidden
+            className="flex size-6 items-center justify-center rounded-[6px] bg-ink transition-colors group-hover:bg-brand-800"
+          >
+            <span className="grid grid-cols-2 gap-0.5">
+              <span className="size-1 rounded-[1px] bg-paper" />
+              <span className="size-1 rounded-[1px] bg-paper" />
+              <span className="size-1 rounded-[1px] bg-paper" />
+              <span className="size-1 rounded-[1px] bg-paper" />
+            </span>
+          </span>
+          <span className="text-[15px] font-semibold tracking-tight">
+            Huddle
+          </span>
+        </a>
 
-            <nav
-              aria-label="Primary"
-              className="hidden items-start gap-6 md:flex"
-            >
-              {NAV_LINKS.map((link) => {
-                const isActive = link.label === activeLink;
-                return (
-                  <a
-                    key={link.label}
-                    href={link.href}
-                    className={cn(
-                      "text-base leading-6 transition-colors",
-                      isActive
-                        ? "border-b-2 border-brand pb-[6px] font-bold text-brand-800"
-                        : "pb-1 font-normal text-text-subtle hover:text-brand-700",
-                    )}
-                  >
-                    {link.label}
-                  </a>
-                );
-              })}
-            </nav>
-          </div>
+        <nav className="hidden items-center gap-6 text-sm text-text-subtle md:flex">
+          <a href="#preview" className="transition-colors hover:text-ink">
+            Product
+          </a>
+          <a href="#how-it-works" className="transition-colors hover:text-ink">
+            How it works
+          </a>
+        </nav>
 
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              onClick={onSignIn}
-              className="text-base leading-6 text-text-subtle transition-colors hover:text-brand-700"
-            >
-              Sign in
-            </button>
-            <Button variant="ink" size="nav" onClick={onGetStarted}>
-              Get started
-            </Button>
-          </div>
+        <div className="flex shrink-0 items-center gap-0.5 sm:gap-2">
+          <button
+            type="button"
+            onClick={onSignIn}
+            className="px-2 py-1.5 text-sm text-text-subtle transition-colors hover:text-ink sm:px-2.5"
+          >
+            Sign in
+          </button>
+          <Button variant="ink" size="sm" onClick={onGetStarted}>
+            Get started
+          </Button>
         </div>
       </div>
     </header>

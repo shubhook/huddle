@@ -12,11 +12,9 @@ export function AuthCard({ variant, children, className }: AuthCardProps) {
   return (
     <div
       className={cn(
-        "w-full max-w-[420px] border border-hairline bg-paper",
-        variant === "signin" &&
-          "rounded-lg px-[49px] pb-[49px] pt-[73px] shadow-[0px_12px_32px_rgba(15,39,68,0.08)]",
-        variant === "signup" &&
-          "overflow-hidden rounded-lg shadow-[0px_12px_32px_rgba(15,39,68,0.1)]",
+        "w-full max-w-[380px] rounded-xl border border-hairline bg-paper/90",
+        variant === "signin" && "px-6 pb-6 pt-7",
+        variant === "signup" && "overflow-hidden",
         className,
       )}
     >

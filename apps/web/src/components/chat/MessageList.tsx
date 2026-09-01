@@ -43,22 +43,20 @@ export function MessageList({
   return (
     <div
       className={cn(
-        "flex flex-1 flex-col overflow-y-auto px-6 pb-6 pt-10",
+        "flex flex-1 flex-col overflow-y-auto px-5 pb-4 pt-6",
         className,
       )}
     >
       {renderedMessages.map(({ message, isGrouped }, index) => (
         <div
           key={message.id}
-          className={cn(index > 0 && (isGrouped ? "mt-2" : "mt-12"))}
+          className={cn(index > 0 && (isGrouped ? "mt-1" : "mt-4"))}
         >
           {message.dateLabel && (
-            <div className="mb-12 flex items-center justify-center">
-              <div className="h-px w-[100px] max-w-[100px] bg-hairline-strong" />
-              <span className="px-2 font-mono text-[10px] uppercase leading-[15px] text-text-muted">
+            <div className="mb-4 flex items-center justify-center">
+              <span className="font-mono text-[10px] uppercase tracking-wide text-text-placeholder">
                 {message.dateLabel}
               </span>
-              <div className="h-px w-[100px] max-w-[100px] bg-hairline-strong" />
             </div>
           )}
 

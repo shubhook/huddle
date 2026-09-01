@@ -3,13 +3,9 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ----------------------------------------------------------------
-   Huddle design tokens — blue brand system (Slack-informed patterns)
-   Cool neutrals + brand blue scale. Ink stays near-black for text.
-   ---------------------------------------------------------------- */
+/* Huddle — cloudy calm: soft sky surfaces, quiet ink, restrained accent */
 
 @theme inline {
-  /* brand scale */
   --color-brand-50: var(--brand-50);
   --color-brand-100: var(--brand-100);
   --color-brand-200: var(--brand-200);
@@ -22,19 +18,16 @@
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
 
-  /* surfaces */
   --color-ink: var(--ink);
   --color-paper: var(--paper);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-surface-lowest: var(--surface-lowest);
 
-  /* hairlines / borders */
   --color-hairline: var(--hairline);
   --color-hairline-strong: var(--hairline-strong);
   --color-hairline-frost: var(--hairline-frost);
 
-  /* text */
   --color-text: var(--text);
   --color-text-muted: var(--text-muted);
   --color-text-subtle: var(--text-subtle);
@@ -42,7 +35,6 @@
   --color-text-on-ink: var(--text-on-ink);
   --color-text-on-brand: var(--text-on-brand);
 
-  /* signal / status */
   --color-signal: var(--signal);
   --color-warning: var(--warning);
   --color-destructive: var(--destructive);
@@ -51,7 +43,6 @@
   --color-surface-container: var(--surface-container);
   --color-hairline-frost-50: var(--hairline-frost-50);
 
-  /* sidebar chrome (product shell) */
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-muted: var(--sidebar-muted);
@@ -59,7 +50,6 @@
   --color-sidebar-active: var(--sidebar-active);
   --color-sidebar-border: var(--sidebar-border);
 
-  /* shadcn aliases */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--paper);
@@ -79,84 +69,79 @@
   --color-border: var(--hairline);
   --color-destructive-foreground: var(--text-on-brand);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
 
-  --font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
-  --font-code: "Menlo", ui-monospace, "SFMono-Regular", monospace;
+  --font-display: "Fraunces", "Iowan Old Style", "Palatino Linotype", serif;
+  --font-sans: "Figtree", "Avenir Next", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+  --font-code: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
 
-  --tracking-tightest: -0.05em;
-  --tracking-tighter: -0.04em;
-  --tracking-tight: -0.025em;
+  --tracking-tightest: -0.04em;
+  --tracking-tighter: -0.03em;
+  --tracking-tight: -0.02em;
   --tracking-wide: 0.02em;
-  --tracking-wider: 0.05em;
+  --tracking-wider: 0.04em;
 }
 
 :root {
-  --radius: 0.5rem;
+  --radius: 0.625rem;
 
-  /* brand blue scale */
-  --brand-50: #eff6ff;
-  --brand-100: #dbeafe;
-  --brand-200: #bfdbfe;
-  --brand-500: #3b82f6;
-  --brand-600: #2563eb;
-  --brand-700: #1d4ed8;
-  --brand-800: #1e40af;
-  --brand-900: #1e3a5f;
-  --brand-950: #0f2744;
-  --brand: #2563eb;
-  --brand-foreground: #ffffff;
-  --text-on-brand: #ffffff;
+  /* soft steel blue — quiet, not electric */
+  --brand-50: #f0f5f9;
+  --brand-100: #e1ebf3;
+  --brand-200: #c5d6e6;
+  --brand-500: #5b7c99;
+  --brand-600: #4a6a86;
+  --brand-700: #3b5670;
+  --brand-800: #2f4559;
+  --brand-900: #243748;
+  --brand-950: #162430;
+  --brand: #4a6a86;
+  --brand-foreground: #f8fafc;
+  --text-on-brand: #f8fafc;
 
-  /* surfaces — cool blue-grays */
-  --ink: #0f172a;
-  --paper: #ffffff;
-  --surface: #ffffff;
-  --surface-2: #eef2f7;
-  --surface-lowest: #f4f7fb;
-  --surface-container: #e8edf4;
+  /* cloudy sky surfaces */
+  --ink: #243040;
+  --paper: #fcfdfe;
+  --surface: #f7f9fb;
+  --surface-2: #eef3f7;
+  --surface-lowest: #e8eef4;
+  --surface-container: #e2eaf1;
 
-  /* hairlines */
-  --hairline: #d5deea;
-  --hairline-strong: #b8c4d4;
-  --hairline-frost: rgba(37, 99, 235, 0.12);
-  --hairline-frost-50: rgba(37, 99, 235, 0.18);
+  --hairline: #d3dde7;
+  --hairline-strong: #b7c5d3;
+  --hairline-frost: rgba(74, 106, 134, 0.14);
+  --hairline-frost-50: rgba(74, 106, 134, 0.2);
 
-  /* text */
-  --text: #0f172a;
-  --text-muted: #5a6578;
-  --text-subtle: #475569;
-  --text-placeholder: #94a3b8;
-  --text-on-ink: #ffffff;
+  --text: #243040;
+  --text-muted: #5c6b7a;
+  --text-subtle: #6b7a8a;
+  --text-placeholder: #93a1af;
+  --text-on-ink: #f8fafc;
 
-  /* signal / status */
-  --signal: #10b981;
-  --warning: #f59e0b;
-  --destructive: #ba1a1a;
-  --window-min: #64748b;
+  --signal: #3d9a7a;
+  --warning: #c48a2a;
+  --destructive: #b33a3a;
+  --window-min: #7a8a9a;
 
-  /* frosted top nav — cool white with blue cast */
-  --surface-frost: rgba(244, 247, 251, 0.82);
+  --surface-frost: rgba(247, 249, 251, 0.78);
 
-  /* product sidebar (Slack-like deep chrome) */
-  --sidebar: #1e3a5f;
-  --sidebar-foreground: #f8fafc;
-  --sidebar-muted: #94a3b8;
-  --sidebar-hover: rgba(255, 255, 255, 0.08);
-  --sidebar-active: #2563eb;
-  --sidebar-border: rgba(255, 255, 255, 0.1);
+  /* soft slate sidebar — not Slack navy */
+  --sidebar: #2a3a4a;
+  --sidebar-foreground: #f2f5f8;
+  --sidebar-muted: #9aabba;
+  --sidebar-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-active: #4a6a86;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
 
-  /* shadcn shims */
-  --background: #f4f7fb;
-  --foreground: #0f172a;
-  --border: #d5deea;
-  --input: #d5deea;
-  --ring: #3b82f6;
+  --background: #e8eef4;
+  --foreground: #243040;
+  --border: #d3dde7;
+  --input: #d3dde7;
+  --ring: #5b7c99;
 }
 
 @layer base {
@@ -167,26 +152,83 @@
   }
 
   html {
-    @apply bg-surface-lowest text-text antialiased;
+    @apply text-text antialiased;
     font-family: var(--font-sans);
+    background-color: var(--surface-lowest);
+    background-image:
+      radial-gradient(ellipse 90% 55% at 50% -10%, rgba(200, 220, 235, 0.55), transparent 55%),
+      radial-gradient(ellipse 50% 40% at 100% 20%, rgba(180, 205, 225, 0.25), transparent 50%),
+      radial-gradient(ellipse 45% 35% at 0% 60%, rgba(210, 225, 235, 0.3), transparent 45%);
+    background-attachment: fixed;
   }
 
   body {
-    @apply bg-surface-lowest text-text;
+    @apply text-text;
     font-family: var(--font-sans);
+    background: transparent;
   }
 
   .font-mono-label {
     font-family: var(--font-mono);
     font-weight: 500;
-    font-size: 12px;
-    line-height: 12px;
-    letter-spacing: 0.6px;
+    font-size: 11px;
+    line-height: 1;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
   }
 
   .font-mono-data {
     font-family: var(--font-mono);
     font-weight: 400;
+  }
+
+  .sky-wash {
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(210, 225, 238, 0.7), transparent 60%);
+  }
+
+  .hero-grid {
+    background-image:
+      linear-gradient(to right, rgba(36, 48, 64, 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(36, 48, 64, 0.035) 1px, transparent 1px);
+    background-size: 48px 28px;
+    mask-image: linear-gradient(to bottom, transparent 0%, black 18%, black 70%, transparent 100%);
+  }
+
+  @keyframes hero-rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes hero-float {
+    from {
+      opacity: 0;
+      transform: translateY(28px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .hero-rise {
+    animation: hero-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .hero-float {
+    animation: hero-float 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-rise,
+    .hero-float {
+      animation: none;
+    }
   }
 }

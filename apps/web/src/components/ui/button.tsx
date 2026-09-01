@@ -4,50 +4,38 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-/**
- * Huddle buttons — brand-blue primary with quiet secondaries.
- * - `ink`     : solid brand CTA (kept name for call-site compatibility)
- * - `outline` : hairline-bordered transparent button
- * - `ghost`   : icon-only / text actions
- */
 const buttonVariants = cva(
   [
-    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md",
-    "text-sm font-normal leading-6",
+    "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md",
+    "text-sm font-medium leading-5",
     "transition-colors",
     "disabled:pointer-events-none disabled:opacity-50",
     "[&_svg]:pointer-events-none [&_svg]:shrink-0",
-    "outline-none focus-visible:ring-2 focus-visible:ring-brand-500/35",
+    "outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30",
   ].join(" "),
   {
     variants: {
       variant: {
-        // Solid brand — primary action (Quick Start, Get started, Sign in)
-        ink:
-          "bg-brand text-text-on-brand hover:bg-brand-700 active:bg-brand-800 shadow-[0_1px_2px_rgba(37,99,235,0.2)]",
-        // Hairline border — secondary (Documentation)
+        ink: "bg-brand text-text-on-brand hover:bg-brand-700 active:bg-brand-800",
         outline:
-          "bg-paper text-ink border border-hairline hover:border-brand-200 hover:bg-brand-50",
-        // Text-only — chat header / message input icon buttons
+          "bg-paper/80 text-ink border border-hairline hover:bg-paper hover:border-hairline-strong",
         ghost:
-          "bg-transparent text-text-subtle hover:text-brand-700 hover:bg-brand-50",
-        default:
-          "bg-brand text-text-on-brand hover:bg-brand-700 shadow-[0_1px_2px_rgba(37,99,235,0.2)]",
+          "bg-transparent text-text-subtle hover:text-ink hover:bg-surface-2/80",
+        default: "bg-brand text-text-on-brand hover:bg-brand-700",
         secondary:
           "bg-surface-2 text-ink hover:bg-brand-50 border border-hairline",
-        link:
-          "text-brand-700 underline-offset-4 hover:underline hover:text-brand-800",
+        link: "text-brand-700 underline-offset-4 hover:underline hover:text-brand-800",
         destructive:
           "bg-destructive text-text-on-brand hover:bg-destructive/90",
       },
       size: {
-        hero: "h-[50px] px-6 py-[13px] rounded-md text-base font-medium",
-        nav: "h-10 px-4 py-2 rounded-md text-base font-medium",
-        default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3 text-sm",
-        icon: "h-[26px] w-5 p-0 rounded-md",
-        "icon-sm": "size-8 rounded-md",
-        "icon-lg": "size-10 rounded-md",
+        hero: "h-10 px-5 rounded-lg text-sm font-semibold",
+        nav: "h-8 px-3 rounded-md text-sm",
+        default: "h-8 px-3.5",
+        sm: "h-7 rounded-md px-2.5 text-xs",
+        icon: "size-7 p-0 rounded-md",
+        "icon-sm": "size-7 rounded-md",
+        "icon-lg": "size-8 rounded-md",
       },
     },
     defaultVariants: {

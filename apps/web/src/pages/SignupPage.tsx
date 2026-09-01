@@ -12,7 +12,7 @@ interface SignupPageProps {
 
 export function SignupPage({ onSubmit, onSignIn, error }: SignupPageProps) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface-lowest px-4 py-16">
+    <div className="flex min-h-screen items-center justify-center px-4 py-14">
       <SignupForm onSubmit={onSubmit} onSignIn={onSignIn} error={error} />
     </div>
   );

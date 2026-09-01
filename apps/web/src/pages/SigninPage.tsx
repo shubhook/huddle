@@ -10,29 +10,22 @@ interface SigninPageProps {
 export function SigninPage({
   onSubmit,
   onSignUp,
-  onForgotPassword,
   error,
 }: SigninPageProps) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface-lowest px-4 py-16">
-      <div className="flex w-full max-w-[420px] flex-col gap-6">
-        <header className="flex flex-col items-center gap-2 text-center">
-          <h1 className="font-display text-[32px] font-semibold leading-[38.4px] tracking-[-0.8px] text-brand-900">
+    <div className="flex min-h-screen items-center justify-center px-4 py-14">
+      <div className="flex w-full max-w-[380px] flex-col gap-5">
+        <header className="flex flex-col items-center gap-1 text-center">
+          <h1 className="font-display text-2xl font-medium tracking-tight text-brand-900">
             Huddle
           </h1>
-          <p className="font-mono text-xs uppercase tracking-[0.6px] text-brand-600">
-            Authentication
-          </p>
+          <p className="text-xs text-text-muted">Welcome back</p>
         </header>
 
-        <SigninForm
-          onSubmit={onSubmit}
-          onForgotPassword={onForgotPassword}
-          error={error}
-        />
+        <SigninForm onSubmit={onSubmit} error={error} />
 
-        <p className="text-center text-[13px] leading-[18.2px] text-text-subtle">
-          Don&apos;t have an account?{" "}
+        <p className="text-center text-xs text-text-muted">
+          No account yet?{" "}
           <button
             type="button"
             onClick={onSignUp}

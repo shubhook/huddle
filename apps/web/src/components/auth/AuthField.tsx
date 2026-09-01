@@ -30,14 +30,14 @@ export function AuthField({
   const fieldId = id ?? props.name;
 
   return (
-    <div className="flex w-full flex-col gap-1">
+    <div className="flex w-full flex-col gap-1.5">
       <div className="flex items-center justify-between gap-2">
         <label
           htmlFor={fieldId}
           className={cn(
             labelVariant === "mono"
-              ? "font-mono text-xs font-medium uppercase tracking-[0.6px] text-text-subtle"
-              : "text-[13px] leading-[18.2px] text-ink",
+              ? "font-mono text-[11px] font-medium uppercase tracking-[0.06em] text-text-subtle"
+              : "text-sm text-ink",
           )}
         >
           {label}
@@ -49,7 +49,7 @@ export function AuthField({
         {Icon && iconPosition === "left" && (
           <Icon
             aria-hidden
-            className="pointer-events-none absolute left-[9px] top-1/2 size-[18px] -translate-y-1/2 text-text-subtle"
+            className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-text-placeholder"
             strokeWidth={1.75}
           />
         )}
@@ -57,15 +57,14 @@ export function AuthField({
         <input
           id={fieldId}
           className={cn(
-            "w-full rounded border border-hairline outline-none transition-colors",
-            "focus-visible:border-brand-500 focus-visible:ring-2 focus-visible:ring-brand-500/20",
+            "w-full rounded-md border border-hairline bg-paper/80 outline-none transition-colors",
+            "text-sm placeholder:text-text-placeholder",
+            "focus-visible:border-brand-500 focus-visible:ring-2 focus-visible:ring-brand-500/15",
             "disabled:cursor-not-allowed disabled:opacity-50",
-            inputVariant === "signin" &&
-              "bg-paper px-[17px] py-[11px] text-base placeholder:text-text-placeholder",
-            inputVariant === "signup" &&
-              "h-11 bg-surface-container px-[9px] text-sm placeholder:text-text-placeholder",
-            Icon && iconPosition === "left" && "pl-[31px]",
-            Icon && iconPosition === "right" && "pr-10",
+            "h-9 px-3",
+            Icon && iconPosition === "left" && "pl-8",
+            Icon && iconPosition === "right" && "pr-8",
+            inputVariant === "signup" && "bg-surface/80",
             error && "border-destructive focus-visible:border-destructive",
             className,
           )}
@@ -76,19 +75,15 @@ export function AuthField({
         {Icon && iconPosition === "right" && (
           <Icon
             aria-hidden
-            className="pointer-events-none absolute right-4 top-1/2 size-[18px] -translate-y-1/2 text-text-subtle"
+            className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-text-placeholder"
             strokeWidth={1.75}
           />
         )}
       </div>
 
-      {error && (
-        <p className="text-[13px] leading-[18.2px] text-destructive">{error}</p>
-      )}
+      {error && <p className="text-xs text-destructive">{error}</p>}
       {hint && !error && (
-        <p className="pt-1 font-mono text-[13px] leading-[19.5px] text-text-placeholder">
-          {hint}
-        </p>
+        <p className="text-xs text-text-placeholder">{hint}</p>
       )}
     </div>
   );

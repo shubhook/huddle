@@ -15,7 +15,6 @@ interface SigninFormProps {
 
 export function SigninForm({
   onSubmit,
-  onForgotPassword,
   error,
   className,
 }: SigninFormProps) {
@@ -35,23 +34,23 @@ export function SigninForm({
 
   return (
     <AuthCard variant="signin" className={className}>
-      <div className="mb-6 flex flex-col gap-1">
-        <h2 className="text-base leading-6 text-ink">Sign in to your account</h2>
-        <p className="text-[13px] leading-[18.2px] text-text-subtle">
-          Welcome back. Enter your details to proceed.
+      <div className="mb-5 flex flex-col gap-1">
+        <h2 className="text-sm font-medium text-ink">Sign in</h2>
+        <p className="text-xs text-text-muted">
+          Come back in with email or GitHub.
         </p>
       </div>
 
       <div className="mb-4">
-        <GithubAuthButton variant="signin" label="Continue with GitHub" />
+        <GithubAuthButton variant="signin" />
       </div>
 
-      <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+      <form className="flex flex-col gap-3.5" onSubmit={handleSubmit}>
         <AuthField
           name="email"
           type="email"
           label="Email"
-          placeholder="name@company.com"
+          placeholder="you@example.com"
           autoComplete="email"
           icon={Mail}
           iconPosition="right"
@@ -61,42 +60,27 @@ export function SigninForm({
           required
         />
 
-        <div className="pb-2">
-          <AuthField
-            name="password"
-            type="password"
-            label="Password"
-            placeholder="••••••••"
-            autoComplete="current-password"
-            icon={KeyRound}
-            iconPosition="right"
-            inputVariant="signin"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            labelAction={
-              <button
-                type="button"
-                onClick={onForgotPassword}
-                className="text-[13px] leading-[18.2px] text-text-subtle transition-colors hover:text-brand-700"
-              >
-                Forgot password?
-              </button>
-            }
-            required
-          />
-        </div>
+        <AuthField
+          name="password"
+          type="password"
+          label="Password"
+          placeholder="••••••••"
+          autoComplete="current-password"
+          icon={KeyRound}
+          iconPosition="right"
+          inputVariant="signin"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
 
-        {error && (
-          <p className="text-[13px] leading-[18.2px] text-destructive">{error}</p>
-        )}
+        {error && <p className="text-xs text-destructive">{error}</p>}
 
         <button
           type="submit"
           disabled={isSubmitting}
           className={cn(
-            "w-full rounded-md bg-brand px-4 py-[10px]",
-            "text-sm font-medium leading-[21px] text-text-on-brand",
-            "shadow-[0_1px_2px_rgba(37,99,235,0.2)]",
+            "mt-1 h-9 w-full rounded-md bg-brand text-sm font-medium text-text-on-brand",
             "transition-colors hover:bg-brand-700",
             "disabled:pointer-events-none disabled:opacity-50",
           )}

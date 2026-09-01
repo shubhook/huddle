@@ -2,7 +2,6 @@ import { startGithubLogin } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 interface GithubAuthButtonProps {
-  /** Visual density to match signin vs signup form styles */
   variant?: "signin" | "signup";
   className?: string;
   label?: string;
@@ -21,34 +20,27 @@ function GithubMark({ className }: { className?: string }) {
   );
 }
 
-/**
- * GitHub OAuth entry point — placed above email/password fields with an OR divider below.
- */
 export function GithubAuthButton({
-  variant = "signin",
   className,
   label = "Continue with GitHub",
 }: GithubAuthButtonProps) {
   return (
-    <div className={cn("flex flex-col gap-4", className)}>
+    <div className={cn("flex flex-col gap-3", className)}>
       <button
         type="button"
         onClick={() => startGithubLogin()}
         className={cn(
-          "flex w-full items-center justify-center gap-2.5 border border-hairline bg-paper text-ink transition-colors hover:border-brand-200 hover:bg-brand-50",
-          variant === "signin" &&
-            "rounded bg-transparent px-4 py-[10px] text-sm leading-[21px]",
-          variant === "signup" &&
-            "h-11 rounded text-base font-medium leading-6",
+          "flex h-9 w-full items-center justify-center gap-2 rounded-md border border-hairline",
+          "bg-paper/80 text-sm text-ink transition-colors hover:bg-surface-2",
         )}
       >
-        <GithubMark className="size-4 shrink-0" />
+        <GithubMark className="size-3.5 shrink-0" />
         {label}
       </button>
 
-      <div className="flex items-center gap-3" role="separator" aria-label="or">
+      <div className="flex items-center gap-2.5" role="separator" aria-label="or">
         <div className="h-px flex-1 bg-hairline" />
-        <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-text-subtle">
+        <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-placeholder">
           or
         </span>
         <div className="h-px flex-1 bg-hairline" />
