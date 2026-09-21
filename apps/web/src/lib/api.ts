@@ -1,6 +1,11 @@
 import axios from "axios"
 
-export const API_URL = process.env.BUN_PUBLIC_API_URL ?? "http://localhost:3000";
+/** API origin. Trailing slash stripped so WS and path joins stay correct. */
+export const API_URL = (
+  process.env.BUN_PUBLIC_API_URL ?? "http://localhost:3000"
+).replace(/\/$/, "");
+
+axios.defaults.withCredentials = true;
 
 /** Full-page redirect URL for GitHub OAuth (server sets state cookie + redirects). */
 export function getGithubAuthUrl(): string {

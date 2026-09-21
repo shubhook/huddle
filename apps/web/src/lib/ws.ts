@@ -36,6 +36,13 @@ function send(type: string, payload: Record<string, unknown>) {
   }
 }
 
+/** Prefer BUN_PUBLIC_WS_URL; otherwise derive ws(s) from API_URL. */
+export function getWsUrl(): string {
+  const fromEnv = process.env.BUN_PUBLIC_WS_URL?.replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
+  return API_URL.replace(/^http/, "ws");
+}
+
 export function getConnectionStatus(): ConnectionStatus {
   return status;
 }
@@ -59,8 +66,9 @@ export function connectSocket(): void {
     return;
   }
 
-  const wsUrl = API_URL.replace(/^http/, "ws");
+  const wsUrl = getWsUrl();
   setStatus("connecting");
+  // Browser sends jwt_token cookie for the API host on upgrade (same as REST).
   socket = new WebSocket(wsUrl);
 
   socket.addEventListener("open", () => setStatus("connected"));
