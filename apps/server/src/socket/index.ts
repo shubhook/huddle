@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 
 import { env } from "../utils/env";
 import type { tokenPayload } from "../utils/auth";
+import { AUTH_COOKIE } from "../utils/cookies";
 import { handleJoinChannel, handleLeaveChannel, handleSendMessage, handleSendDirectMessage, handleLeaveDirectMessage } from "./handlers";
 import type { parsedObjectType } from "./types";
 import type { AuthenticatedWebSocket } from "./types";
@@ -27,7 +28,7 @@ function authenticate(req: IncomingMessage): string {
 
     const cookies = parseCookies(cookieHeader);
 
-    const token = cookies["jwt_token"];
+    const token = cookies[AUTH_COOKIE];
 
     if (!token) {
         throw new Error("Missing JWT token");
