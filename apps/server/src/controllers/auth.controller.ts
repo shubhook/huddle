@@ -9,6 +9,33 @@ import { generateToken } from "../utils/auth";
 import { clearAuthCookie, setAuthCookie } from "../utils/cookies";
 import { env } from "../utils/env";
 
+/** Map Prisma / DB failures to HTTP status + client-safe message. */
+function mapPrismaAuthError(e: unknown): { status: number; message: string } {
+    const err = e as { code?: string; errorCode?: string; message?: string };
+    const code = err.code ?? err.errorCode;
+
+    if (
+        code === "P1000" ||
+        code === "P1001" ||
+        code === "P1017" ||
+        /Can't reach database|Authentication failed against database server|ECONNREFUSED/i.test(
+            err.message ?? "",
+        )
+    ) {
+        return {
+            status: 503,
+            message:
+                "Database unavailable (check DATABASE_URL / Postgres credentials).",
+        };
+    }
+
+    if (code === "P2002") {
+        return { status: 409, message: "user already exists" };
+    }
+
+    return { status: 500, message: "Internal server error" };
+}
+
 export async function initiateGithubAuth(req: Request, res: Response) {
     if (!github) {
         res.status(503).json({ message: "GitHub OAuth is not configured" });
@@ -110,6 +137,7 @@ export async function signup(req: Request, res: Response) {
     if (!parsedBody.success) {
         res.status(400).json({
             message: "validation error",
+            issues: parsedBody.error.issues,
         });
         return;
     }
@@ -134,26 +162,31 @@ export async function signup(req: Request, res: Response) {
             username,
         });
     } catch (e) {
-        console.log(e);
-        res.status(409).json({
-            message: "user already exists",
-        });
+        console.error(e);
+        const { status, message } = mapPrismaAuthError(e);
+        res.status(status).json({ message });
         return;
     }
 }
 
 export async function getCurrentUser(req: Request, res: Response) {
-    const user = await prisma.user.findUnique({
-        where: { id: req.userId },
-        select: { id: true, username: true, email: true },
-    });
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: req.userId },
+            select: { id: true, username: true, email: true },
+        });
 
-    if (!user) {
-        res.status(404).json({ message: "User not found" });
-        return;
+        if (!user) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+
+        res.status(200).json({ user });
+    } catch (e) {
+        console.error(e);
+        const { status, message } = mapPrismaAuthError(e);
+        res.status(status).json({ message });
     }
-
-    res.status(200).json({ user });
 }
 
 export async function logout(req: Request, res: Response) {
@@ -167,6 +200,7 @@ export async function signin(req: Request, res: Response) {
     if (!parsedBody.success) {
         res.status(400).json({
             message: "validation error",
+            issues: parsedBody.error.issues,
         });
         return;
     }
@@ -200,7 +234,8 @@ export async function signin(req: Request, res: Response) {
         });
     } catch (e) {
         console.error(e);
-        res.status(400).json({ message: "Invalid Username or Password" });
+        const { status, message } = mapPrismaAuthError(e);
+        res.status(status).json({ message });
         return;
     }
 }

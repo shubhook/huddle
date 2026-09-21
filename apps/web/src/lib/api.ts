@@ -7,6 +7,17 @@ export const API_URL = (
 
 axios.defaults.withCredentials = true;
 
+/** Prefer server `message` from an Axios error response; otherwise fallback. */
+export function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (
+    axios.isAxiosError(error) &&
+    typeof error.response?.data?.message === "string"
+  ) {
+    return error.response.data.message;
+  }
+  return fallback;
+}
+
 /** Full-page redirect URL for GitHub OAuth (server sets state cookie + redirects). */
 export function getGithubAuthUrl(): string {
     return `${API_URL}/auth/github`;
