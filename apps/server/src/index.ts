@@ -10,7 +10,7 @@ const server = setupWebSocket(app);
 
 app.use(express.json());
 app.use(cors({
-    origin: "http://localhost:3008",
+    origin: env.clientOrigins,
     credentials: true,
 }));
 
@@ -23,6 +23,7 @@ app.get('/health', (req, res) => {
 app.use(cookieParser());
 app.use(appRouter);
 
-server.listen(  env.PORT, () => {
+server.listen(env.PORT, () => {
     console.log(`Server is running at http://localhost:${env.PORT}`);
-})  
+    console.log(`CORS origins: ${env.clientOrigins.join(", ")}`);
+})

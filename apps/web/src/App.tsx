@@ -13,6 +13,7 @@ import {
   createInvite,
   createWorkspace,
   type CurrentUser,
+  getApiErrorMessage,
   getCurrentUser,
   joinWorkspace,
   logout,
@@ -62,9 +63,12 @@ export function App() {
             await signup(values.username, values.email, values.password);
             setCurrentUser(await getCurrentUser());
             navigateTo("/workspace/create");
-          } catch {
+          } catch (error) {
             setSignupError(
-              "Could not create account. Email may already be in use.",
+              getApiErrorMessage(
+                error,
+                "Could not create account. Email may already be in use.",
+              ),
             );
           }
         }}
@@ -82,8 +86,10 @@ export function App() {
             await signin(values.email, values.password);
             setCurrentUser(await getCurrentUser());
             navigateTo("/app");
-          } catch {
-            setSigninError("Invalid email or password");
+          } catch (error) {
+            setSigninError(
+              getApiErrorMessage(error, "Invalid email or password"),
+            );
           }
         }}
       />

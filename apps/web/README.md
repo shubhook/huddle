@@ -20,6 +20,7 @@ React client for Huddle.
 From this directory (or via root `bun run dev:web`):
 
 ```bash
+cp .env.example .env   # optional
 bun install
 bun --hot src/index.ts
 ```
@@ -34,8 +35,9 @@ bun --hot src/index.ts
 | Variable | Purpose |
 | --- | --- |
 | `BUN_PUBLIC_API_URL` | API origin. Defaults to `http://localhost:3000`. |
+| `BUN_PUBLIC_WS_URL` | Optional. Otherwise `http`→`ws` on the API URL. |
 
-The WebSocket URL is derived by swapping `http` → `ws` on that value.
+Cookies are set by the API host. Open the UI with the same hostname you put in `CLIENT_ORIGIN` / `BUN_PUBLIC_API_URL` (`localhost` vs `127.0.0.1`).
 
 ## Screens
 

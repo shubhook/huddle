@@ -12,14 +12,17 @@ HTTP API and WebSocket layer for Huddle.
 | HTTP | Express 5 |
 | WebSocket | `ws` (`noServer` + HTTP upgrade) |
 | DB | PostgreSQL + Prisma |
-| Auth | httpOnly `jwt_token` cookie |
+| Auth | httpOnly `jwt_token` cookie (`SameSite=Lax`, path `/`) |
 
 ## Run
 
-From this directory (or via root `bun run dev:server`):
+From repo root (see root README) or this directory:
 
 ```bash
+cp .env.example .env   # if missing
 bun install
+bunx prisma generate
+bunx prisma migrate deploy
 bun run src/index.ts
 ```
 
@@ -30,18 +33,16 @@ Default listen address is `http://localhost:3000`.
 | Variable | Purpose |
 | --- | --- |
 | `JWT_SECRET` | Signs and verifies cookies |
-| `CLIENT_ID` | GitHub OAuth app id |
-| `CLIENT_SECRET` | GitHub OAuth secret |
-| `GITHUB_REDIRECT_URI` | OAuth callback URL |
 | `DATABASE_URL` | Prisma Postgres URL |
 
-Optional: `PORT` (defaults to `3000`).
+### Optional env
 
-Generate the Prisma client after schema changes:
-
-```bash
-bunx prisma generate
-```
+| Variable | Purpose |
+| --- | --- |
+| `PORT` | API port (default `3000`) |
+| `CLIENT_ORIGIN` | Comma-separated CORS origins (default localhost + 127.0.0.1 `:3008`) |
+| `COOKIE_SECURE` | `true` for HTTPS only |
+| `CLIENT_ID` / `CLIENT_SECRET` / `GITHUB_REDIRECT_URI` | GitHub OAuth (omit for email/password only) |
 
 ## Routes (high level)
 
@@ -53,7 +54,7 @@ bunx prisma generate
 | DMs | `/dm/:userId` REST only |
 | Health | `GET /health` |
 
-CORS is currently fixed to `http://localhost:3008` for local web.
+CORS uses `CLIENT_ORIGIN` with `credentials: true` for the local web app.
 
 ## WebSocket
 

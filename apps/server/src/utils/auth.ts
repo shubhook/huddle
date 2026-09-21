@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import  type { Request, Response, NextFunction } from "express"
 import { env } from "./env";
+import { AUTH_COOKIE } from "./cookies";
 
 export type tokenPayload = {
     userId: string
@@ -11,7 +12,7 @@ export function generateToken(payload: tokenPayload): string {
 }
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
-    const token = req.cookies["jwt_token"] as string;
+    const token = req.cookies[AUTH_COOKIE] as string;
 
     if(token == undefined || token == "") {
         res.status(401).json({
