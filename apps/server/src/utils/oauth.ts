@@ -1,8 +1,10 @@
 import * as arctic from "arctic";
-import { env } from "./env";
+import { env, isGithubOAuthConfigured } from "./env";
 
-export const github = new arctic.GitHub(
-    env.githubClientId, 
-    env.githubSecret, 
-    env.githubRedirectUri
-);
+export const github = isGithubOAuthConfigured
+    ? new arctic.GitHub(
+          env.githubClientId,
+          env.githubSecret,
+          env.githubRedirectUri,
+      )
+    : null;
