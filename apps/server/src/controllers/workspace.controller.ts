@@ -36,6 +36,21 @@ export async function createWorkspace(req: Request, res: Response) {
                 }
             });
 
+            // Every workspace starts with #general so the owner has somewhere to chat.
+            const generalChannel = await tx.channel.create({
+                data: {
+                    name: "general",
+                    workspaceId: createdWorkspace.id
+                }
+            });
+
+            await tx.channelMember.create({
+                data: {
+                    channelId: generalChannel.id,
+                    userId: req.userId
+                }
+            });
+
             return createdWorkspace;
         });
 
@@ -51,6 +66,30 @@ export async function createWorkspace(req: Request, res: Response) {
             message: "Failed to create workspace. Please try again.",
         });
         return;
+    }
+}
+
+export async function listWorkspaces(req: Request, res: Response) {
+    try {
+        const memberships = await prisma.workspaceMember.findMany({
+            where: { userId: req.userId },
+            orderBy: { joinedAt: "asc" },
+            include: { workspace: { select: { id: true, name: true } } }
+        });
+
+        res.status(200).json({
+            workspaces: memberships.map((membership) => ({
+                id: membership.workspace.id,
+                name: membership.workspace.name,
+                role: membership.role
+            }))
+        });
+    }
+    catch(e) {
+        console.error(e);
+        res.status(500).json({
+            message: "Failed to list workspaces. Please try again."
+        });
     }
 }
 

@@ -1,8 +1,17 @@
 import axios from "axios"
 
+/** Unset BUN_PUBLIC_* vars are not inlined, so a bare read throws in the browser. */
+function readApiUrlFromEnv(): string | undefined {
+  try {
+    return process.env.BUN_PUBLIC_API_URL;
+  } catch {
+    return undefined;
+  }
+}
+
 /** API origin. Trailing slash stripped so WS and path joins stay correct. */
 export const API_URL = (
-  process.env.BUN_PUBLIC_API_URL ?? "http://localhost:3000"
+  readApiUrlFromEnv() ?? "http://localhost:3000"
 ).replace(/\/$/, "");
 
 axios.defaults.withCredentials = true;
@@ -44,6 +53,17 @@ export async function signup(username: string, email: string, password: string) 
     }, { withCredentials: true })
 
     return res.data;
+}
+
+export interface WorkspaceSummary {
+    id: string;
+    name: string;
+    role: string;
+}
+
+export async function listWorkspaces(): Promise<WorkspaceSummary[]> {
+    const res = await axios.get(`${API_URL}/workspaces`, { withCredentials: true });
+    return res.data.workspaces;
 }
 
 export async function createWorkspace(name: string): Promise<{ workspaceId: string }> {
