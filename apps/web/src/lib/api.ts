@@ -94,6 +94,24 @@ export async function joinWorkspace(inviteCode: string): Promise<{ workspaceId: 
     return res.data;
 }
 
+export interface Channel {
+    id: string;
+    name: string;
+    workspaceId: string;
+}
+
+export async function createChannel(
+    workspaceId: string,
+    name: string,
+): Promise<Channel> {
+    const res = await axios.post(
+      `${API_URL}/workspaces/${workspaceId}/channels`,
+      { name },
+      { withCredentials: true },
+    );
+    return res.data.data;
+}
+
 export async function sendMessage(channelId: string, content: string) {
     const res = await axios.post(
       `${API_URL}/channel/${channelId}/messages`,
