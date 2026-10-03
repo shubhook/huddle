@@ -9,7 +9,7 @@ import { env } from "../utils/env";
  */
 export type BusEvent =
     | { kind: "channel_frame"; channelId: string; frame: unknown }
-    | { kind: "revoke_token"; tokenHash: string };
+    | { kind: "revoke_sessions"; sessionIds: string[] };
 
 type BusHandler = (event: BusEvent) => void;
 type RedisClient = ReturnType<typeof createClient>;

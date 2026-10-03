@@ -63,13 +63,19 @@ export function deliverToChannel(channelId: string, frame: unknown) {
     }
 }
 
-/** Closes every socket that authenticated with this token. Used on logout. */
-export function closeSocketsForToken(tokenHash: string) {
+/** Closes every socket on this process that was opened under one of these sessions. */
+export function closeSocketsForSessions(sessionIds: string[]) {
+    const ids = new Set(sessionIds);
     for (const ws of connections) {
-        if (ws.tokenHash === tokenHash) {
-            ws.close(CLOSE_SESSION_ENDED, "signed out");
+        if (ids.has(ws.sessionId)) {
+            ws.close(CLOSE_SESSION_ENDED, "session ended");
         }
     }
+}
+
+/** The sessions behind the open sockets on this process, for the periodic recheck. */
+export function connectedSessionIds(): string[] {
+    return [...new Set([...connections].map((ws) => ws.sessionId))];
 }
 
 /** Drops one user from one channel and tells their sockets. */
