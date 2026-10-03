@@ -2,17 +2,16 @@ import { createServer, IncomingMessage } from "http";
 import type { Duplex } from "stream";
 import { type Express } from "express";
 import { WebSocketServer, type RawData } from "ws";
-import jwt from "jsonwebtoken";
 
 import { env } from "../utils/env";
-import type { tokenPayload } from "../utils/auth";
 import { AUTH_COOKIE } from "../utils/cookies";
+import { isTokenError, verifyToken } from "../utils/token";
+import { findActiveSession, SessionInactiveError } from "../services/session.service";
 import { onBusEvent, startBus } from "./bus";
 import { handleJoinChannel, handleLeaveChannel, handleSendMessage, handleSendDirectMessage, handleLeaveDirectMessage } from "./handlers";
 import { startMaintenance } from "./maintenance";
 import { clientFrameSchema, MAX_FRAME_BYTES, type ClientFrame } from "./schema";
-import { hashToken } from "./session";
-import { cleanupSocket, closeSocketsForToken, deliverToChannel, registerSocket, sendError } from "./state";
+import { cleanupSocket, closeSocketsForSessions, deliverToChannel, registerSocket, sendError } from "./state";
 import { CLOSE_SESSION_ENDED, type AuthenticatedWebSocket } from "./types";
 
 const parseCookies = (cookieString: string) =>
@@ -47,11 +46,11 @@ function rejectUpgrade(socket: Duplex, status: string) {
     );
 }
 
-function authenticate(req: IncomingMessage) {
+async function authenticate(req: IncomingMessage) {
     const cookieHeader = req.headers.cookie;
 
     if (!cookieHeader) {
-        throw new Error("Missing cookie header");
+        throw new SessionInactiveError("no cookie header");
     }
 
     const cookies = parseCookies(cookieHeader);
@@ -59,11 +58,17 @@ function authenticate(req: IncomingMessage) {
     const token = cookies[AUTH_COOKIE];
 
     if (!token) {
-        throw new Error("Missing JWT token");
+        throw new SessionInactiveError("no session cookie");
     }
 
-    const payload = jwt.verify(token, env.JwtSecret) as tokenPayload & { exp?: number };
-    return { userId: payload.userId, tokenHash: hashToken(token), expiresAt: payload.exp };
+    // Signature and expiry first, then the database. A revoked session still has a valid signature.
+    const session = await findActiveSession(verifyToken(token));
+
+    if (!session) {
+        throw new SessionInactiveError("session revoked, expired, or unknown");
+    }
+
+    return { userId: session.userId, sessionId: session.id, expiresAt: session.expiresAt };
 }
 
 // setTimeout stores its delay in 32 bits. Longer delays fire immediately.
@@ -169,12 +174,12 @@ export function setupWebSocket(app: Express) {
     // Events from this process and, with Redis, from every other one.
     onBusEvent((event) => {
         if (event.kind === "channel_frame") deliverToChannel(event.channelId, event.frame);
-        else if (event.kind === "revoke_token") closeSocketsForToken(event.tokenHash);
+        else if (event.kind === "revoke_sessions") closeSocketsForSessions(event.sessionIds);
     });
     void startBus();
     startMaintenance(wss);
 
-    server.on("upgrade", (req, socket, head) => {
+    server.on("upgrade", async (req, socket, head) => {
         // Check the origin first. It is cheaper than verifying a JWT and a bad
         // origin never gets to learn whether its cookie was valid.
         if (!isOriginAllowed(req.headers.origin)) {
@@ -187,31 +192,39 @@ export function setupWebSocket(app: Express) {
         }
 
         try {
-            const session = authenticate(req);
+            const session = await authenticate(req);
+
+            // The client may have hung up while the session lookup ran.
+            if (socket.destroyed) return;
 
             wss.handleUpgrade(req, socket, head, (ws) => {
                 const authed = ws as AuthenticatedWebSocket;
                 authed.userId = session.userId;
-                authed.tokenHash = session.tokenHash;
+                authed.sessionId = session.sessionId;
                 authed.isAlive = true;
                 authed.queue = Promise.resolve();
                 authed.pending = 0;
 
-                // The token is only checked here, so end the socket when it would expire.
-                if (session.expiresAt) {
-                    const msLeft = Math.max(0, session.expiresAt * 1000 - Date.now());
-                    if (msLeft <= MAX_TIMER_MS) {
-                        authed.expiryTimer = setTimeout(
-                            () => authed.close(CLOSE_SESSION_ENDED, "session expired"),
-                            msLeft,
-                        );
-                    }
+                // The session is checked at connect, then on a timer and on revocation
+                // events. Expiry needs no lookup, so end the socket exactly when it hits.
+                const msLeft = Math.max(0, session.expiresAt.getTime() - Date.now());
+                if (msLeft <= MAX_TIMER_MS) {
+                    authed.expiryTimer = setTimeout(
+                        () => authed.close(CLOSE_SESSION_ENDED, "session expired"),
+                        msLeft,
+                    );
                 }
 
                 wss.emit("connection", authed, req);
             });
         } catch (err) {
-            console.error(err);
+            // Bad signature, revoked session and a database error all end up here.
+            // Log the first two quietly, the last one loudly.
+            if (isTokenError(err) || err instanceof SessionInactiveError) {
+                console.warn(`Rejected websocket upgrade: ${(err as Error).message}`);
+            } else {
+                console.error(err);
+            }
 
             rejectUpgrade(socket, "401 Unauthorized");
         }

@@ -1,7 +1,8 @@
 import type { WebSocketServer } from "ws";
 import { prisma } from "../db";
 import { env } from "../utils/env";
-import { evictFromChannel, subscribedPairs } from "./state";
+import { pruneExpiredSessions } from "../services/session.service";
+import { closeSocketsForSessions, connectedSessionIds, evictFromChannel, subscribedPairs } from "./state";
 import type { AuthenticatedWebSocket } from "./types";
 
 /**
@@ -55,19 +56,53 @@ export async function revalidateSubscriptions() {
     }
 }
 
+/**
+ * Revocation normally reaches sockets through the event bus. This is the backstop
+ * for a missed event (Redis down, a process that was restarting), so a revoked
+ * or expired session never keeps a socket open for longer than one interval.
+ */
+export async function revalidateSessions() {
+    const ids = connectedSessionIds();
+
+    for (let i = 0; i < ids.length; i += RECHECK_CHUNK) {
+        const chunk = ids.slice(i, i + RECHECK_CHUNK);
+
+        const active = await prisma.session.findMany({
+            where: { id: { in: chunk }, revokedAt: null, expiresAt: { gt: new Date() } },
+            select: { id: true },
+        });
+
+        const stillActive = new Set(active.map((session) => session.id));
+        closeSocketsForSessions(chunk.filter((id) => !stillActive.has(id)));
+    }
+}
+
+const PRUNE_EVERY_MS = 60 * 60 * 1000;
+
 export function startMaintenance(wss: WebSocketServer) {
     const heartbeat = setInterval(() => sweepDeadSockets(wss), env.wsHeartbeatMs);
 
     const recheck = setInterval(() => {
+        revalidateSessions().catch((err) => console.error("session recheck failed", err));
         revalidateSubscriptions().catch((err) => console.error("membership recheck failed", err));
     }, env.wsMembershipRecheckMs);
+
+    // Expired sessions are dead weight. Prune at boot, then hourly.
+    const prune = () =>
+        pruneExpiredSessions()
+            .then((count) => count > 0 && console.log(`Pruned ${count} expired sessions`))
+            .catch((err) => console.error("session prune failed", err));
+    void prune();
+    const pruneTimer = setInterval(prune, PRUNE_EVERY_MS);
 
     // Do not keep the process alive just for these timers.
     heartbeat.unref();
     recheck.unref();
+    pruneTimer.unref();
 
     wss.on("close", () => {
         clearInterval(heartbeat);
         clearInterval(recheck);
+        clearInterval(pruneTimer);
     });
 }

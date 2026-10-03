@@ -5,10 +5,16 @@ import { github } from "../utils/oauth";
 import * as arctic from "arctic";
 import { prisma } from "../db";
 import type { GithubUser, GitHubEmail } from "../types/oauth.types";
-import { generateToken } from "../utils/auth";
 import { AUTH_COOKIE, clearAuthCookie, setAuthCookie } from "../utils/cookies";
 import { env } from "../utils/env";
-import { endSessionSockets } from "../socket/session";
+import { isTokenError, verifyToken } from "../utils/token";
+import {
+    listActiveSessions,
+    revokeAllSessions,
+    revokeSession,
+    startSession,
+} from "../services/session.service";
+import { z } from "zod";
 
 /** Map Prisma / DB failures to HTTP status + client-safe message. */
 function mapPrismaAuthError(e: unknown): { status: number; message: string } {
@@ -119,7 +125,7 @@ export async function handleGithubCallback(req: Request, res: Response) {
             });
         }
 
-        const BearerToken: string = generateToken({ userId: user.id });
+        const BearerToken = await startSession(user.id, req.get("user-agent"));
 
         setAuthCookie(res, BearerToken);
         const webOrigin = env.clientOrigins[0] ?? "http://localhost:3008";
@@ -155,7 +161,7 @@ export async function signup(req: Request, res: Response) {
             },
         });
 
-        const BearerToken: string = generateToken({ userId: user.id });
+        const BearerToken = await startSession(user.id, req.get("user-agent"));
 
         setAuthCookie(res, BearerToken);
         res.status(201).json({
@@ -191,15 +197,96 @@ export async function getCurrentUser(req: Request, res: Response) {
 }
 
 export async function logout(req: Request, res: Response) {
-    // Sockets are only authenticated when they connect, so close the ones opened
-    // with this session. Otherwise they would keep receiving messages after logout.
     const token = req.cookies?.[AUTH_COOKIE];
+
     if (typeof token === "string" && token !== "") {
-        await endSessionSockets(token);
+        try {
+            // End the session on the server. Clearing the cookie only removes the
+            // browser's copy, so a token that was already copied would keep working.
+            // An expired token still names its session, hence ignoreExpiration.
+            const payload = verifyToken(token, { ignoreExpiration: true });
+            if (payload.sid && payload.userId) {
+                await revokeSession(payload.sid, payload.userId);
+            }
+        } catch (e) {
+            // A forged or garbled token has no session to end. Anything else, such as
+            // the database being down, means the session is still alive. Say so and
+            // keep the cookie, so the user can retry.
+            if (!isTokenError(e)) {
+                console.error(e);
+                res.status(503).json({ message: "Could not end your session. Try again." });
+                return;
+            }
+        }
     }
 
     clearAuthCookie(res);
     res.status(200).json({ message: "Logged out" });
+}
+
+export async function listSessions(req: Request, res: Response) {
+    try {
+        const sessions = await listActiveSessions(req.userId);
+
+        res.status(200).json({
+            sessions: sessions.map((session) => ({
+                id: session.id,
+                createdAt: session.createdAt,
+                expiresAt: session.expiresAt,
+                userAgent: session.userAgent,
+                current: session.id === req.sessionId,
+            })),
+        });
+    } catch (e) {
+        console.error(e);
+        const { status, message } = mapPrismaAuthError(e);
+        res.status(status).json({ message });
+    }
+}
+
+export async function revokeOneSession(req: Request, res: Response) {
+    const sessionId = req.params.id as string;
+
+    try {
+        // Scoped to the caller's own sessions, so another user's id looks like a miss.
+        const revoked = await revokeSession(sessionId, req.userId);
+
+        if (!revoked) {
+            res.status(404).json({ message: "Session not found" });
+            return;
+        }
+
+        if (sessionId === req.sessionId) clearAuthCookie(res);
+        res.status(200).json({ message: "Session revoked" });
+    } catch (e) {
+        console.error(e);
+        const { status, message } = mapPrismaAuthError(e);
+        res.status(status).json({ message });
+    }
+}
+
+const revokeAllSchema = z.object({ keepCurrent: z.boolean().optional() });
+
+export async function revokeAllUserSessions(req: Request, res: Response) {
+    const parsedBody = revokeAllSchema.safeParse(req.body ?? {});
+
+    if (!parsedBody.success) {
+        res.status(400).json({ message: "validation error", issues: parsedBody.error.issues });
+        return;
+    }
+
+    const keepCurrent = parsedBody.data.keepCurrent === true;
+
+    try {
+        const revoked = await revokeAllSessions(req.userId, keepCurrent ? req.sessionId : undefined);
+
+        if (!keepCurrent) clearAuthCookie(res);
+        res.status(200).json({ message: "Sessions revoked", revoked });
+    } catch (e) {
+        console.error(e);
+        const { status, message } = mapPrismaAuthError(e);
+        res.status(status).json({ message });
+    }
 }
 
 export async function signin(req: Request, res: Response) {
@@ -234,7 +321,7 @@ export async function signin(req: Request, res: Response) {
             return;
         }
 
-        const BearerToken: string = generateToken({ userId: user.id });
+        const BearerToken = await startSession(user.id, req.get("user-agent"));
 
         setAuthCookie(res, BearerToken);
         res.status(200).json({

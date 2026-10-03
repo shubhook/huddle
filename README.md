@@ -28,6 +28,7 @@ Redis is optional. With `REDIS_URL` set, realtime events go through Redis pub/su
 | Channel message history (REST) | Working |
 | Live channel chat (WebSocket) | Working. Reconnects on its own, acks sends, fills gaps after a reconnect |
 | Several API processes | Working with `REDIS_URL`, falls back to one process without it |
+| Logout and session revocation | Working. Ending a session kills the token, not just the cookie |
 | Cursor pagination on history | Server side yes, client ignores cursor |
 
 ## Not built yet
@@ -146,6 +147,23 @@ docker compose up --build
 
 Needs a filled `apps/server/.env`. Starts API, Postgres, and Redis. Web is **not** a Compose service — still run `bun run dev:web`.
 
+## Sessions
+
+A signed JWT cannot be cancelled by itself, so every login creates a row in the `Session` table and the token carries its id as `sid`. `requireAuth` and the websocket upgrade verify the signature, then load the row. The request is refused when the row is missing, revoked, expired, or belongs to another user.
+
+| Endpoint | What it does |
+| --- | --- |
+| `POST /auth/logout` | Revokes the caller's session and clears the cookie. Safe to call twice. Returns 503 and keeps the cookie if the database is down, so the user can retry |
+| `GET /auth/sessions` | Lists the user's active sessions. The one making the request has `current: true` |
+| `DELETE /auth/sessions/:id` | Revokes one of the user's own sessions. Another user's id returns 404 |
+| `POST /auth/sessions/revoke-all` | Revokes every session. Send `{ "keepCurrent": true }` to keep the caller's |
+
+Revoking a session also closes its sockets, on every API process. Sessions last 7 days, and expired rows are deleted at boot and hourly. Revoked rows stay until they expire, so a copied token cannot come back to life.
+
+Tokens issued before this change have no `sid` and are rejected, so everyone signs in once after the upgrade. Tokens are pinned to HS256.
+
+Run `bunx prisma generate` and `bunx prisma migrate deploy` in `apps/server` after pulling, since this adds the `Session` table. There is no web UI for listing or revoking sessions yet.
+
 ## Realtime model
 
 History comes over HTTP. Live messages come over WebSocket.
@@ -164,7 +182,7 @@ Rules the server enforces:
 | Size | Frames over 16 KB close the socket with code 1009. Message content is capped at 4000 characters on REST and the socket |
 | Order | One frame at a time per socket, so a leave cannot overtake a join |
 | Liveness | Server pings every `WS_HEARTBEAT_MS`. A peer that misses a pong is terminated |
-| Session | Tokens expire after 7 days and the socket closes with code 4401 at that moment. Logout closes the sockets of that session on every process |
+| Session | The socket is checked against its `Session` row at connect, on revocation, and every `WS_MEMBERSHIP_RECHECK_MS`. An ended or expired session closes the socket with code 4401 on every process |
 | Membership | Checked on join and on every send. Subscribed users are re-checked every `WS_MEMBERSHIP_RECHECK_MS` and removed users get `removed_from_channel` |
 
 Close code 4401 tells the client not to reconnect. Any other close makes the client retry with exponential backoff and jitter (500 ms up to 15 s) and rejoin its channel.
