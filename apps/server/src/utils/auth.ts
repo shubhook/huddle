@@ -7,8 +7,11 @@ export type tokenPayload = {
     userId: string
 }
 
+/** Tokens used to live forever. Open sockets are closed when this runs out. */
+export const TOKEN_TTL = "7d";
+
 export function generateToken(payload: tokenPayload): string {
-    return jwt.sign(payload, env.JwtSecret);
+    return jwt.sign(payload, env.JwtSecret, { expiresIn: TOKEN_TTL });
 }
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {

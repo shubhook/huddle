@@ -26,6 +26,7 @@ import {
   signup,
   type WorkspaceSummary,
 } from "./lib/api";
+import { onSessionEnded } from "./lib/ws";
 
 export function App() {
   const route = useHashRoute();
@@ -53,6 +54,10 @@ export function App() {
       .catch(() => setCurrentUser(null))
       .finally(() => setSessionChecked(true));
   }, []);
+
+  // The server ends a socket when its session expires or the user signs out
+  // elsewhere. Dropping the user here sends them to sign-in via the effect below.
+  useEffect(() => onSessionEnded(() => setCurrentUser(null)), []);
 
   useEffect(() => {
     if (route === "/app" && sessionChecked && !currentUser) {

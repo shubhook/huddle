@@ -6,8 +6,9 @@ import * as arctic from "arctic";
 import { prisma } from "../db";
 import type { GithubUser, GitHubEmail } from "../types/oauth.types";
 import { generateToken } from "../utils/auth";
-import { clearAuthCookie, setAuthCookie } from "../utils/cookies";
+import { AUTH_COOKIE, clearAuthCookie, setAuthCookie } from "../utils/cookies";
 import { env } from "../utils/env";
+import { endSessionSockets } from "../socket/session";
 
 /** Map Prisma / DB failures to HTTP status + client-safe message. */
 function mapPrismaAuthError(e: unknown): { status: number; message: string } {
@@ -190,6 +191,13 @@ export async function getCurrentUser(req: Request, res: Response) {
 }
 
 export async function logout(req: Request, res: Response) {
+    // Sockets are only authenticated when they connect, so close the ones opened
+    // with this session. Otherwise they would keep receiving messages after logout.
+    const token = req.cookies?.[AUTH_COOKIE];
+    if (typeof token === "string" && token !== "") {
+        await endSessionSockets(token);
+    }
+
     clearAuthCookie(res);
     res.status(200).json({ message: "Logged out" });
 }
