@@ -9,6 +9,8 @@ export interface ChatMessage {
   sender: string;
   channel: string;
   timestamp: string;
+  /** ISO time from the server. Used to order messages that arrive by different routes. */
+  createdAt?: string;
   content: string;
   codeBlock?: string;
   avatarTone?: AvatarTone;

@@ -10,4 +10,5 @@ export const channelRouter = Router();
 channelRouter.post('/workspaces/:id/channels', requireAuth, workspaceAuth, asyncHandler(createChannel));
 channelRouter.get('/workspaces/:id/channels', requireAuth, workspaceAuth, asyncHandler(getAllChannels));
 channelRouter.get('/channels/:id/messages', requireAuth, channelAuth, asyncHandler(getMessages));
-channelRouter.post('/channel/:id/messages', requireAuth, channelAuth, asyncHandler(sendMessages));
+// No channelAuth here. sendMessages goes through the message service, which runs the same check.
+channelRouter.post('/channel/:id/messages', requireAuth, asyncHandler(sendMessages));

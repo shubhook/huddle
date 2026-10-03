@@ -13,10 +13,10 @@ I built this to learn WebSockets. The rest of the app exists so that socket has 
 | Realtime | `ws` on the same HTTP server |
 | Database | PostgreSQL via Prisma |
 | Frontend | React + Tailwind |
-| Local infra | Docker Compose (Postgres; Redis container unused by app code) |
+| Local infra | Docker Compose (Postgres, and Redis if you want several API processes) |
 | Deploy | Cloud server (not a self-host product) |
 
-Redis is in Compose and in `package.json`. Nothing in the app imports it yet. Fan-out today is an in-memory `Map` of sockets per channel.
+Redis is optional. With `REDIS_URL` set, realtime events go through Redis pub/sub so several API processes can share channels. Without it, or while Redis is down, each process delivers to its own sockets only.
 
 ## What works
 
@@ -26,17 +26,18 @@ Redis is in Compose and in `package.json`. Nothing in the app imports it yet. Fa
 | GitHub OAuth | Optional (needs `CLIENT_ID` / `CLIENT_SECRET`) |
 | Workspaces + invite links | Working |
 | Channel message history (REST) | Working |
-| Live channel chat (WebSocket) | Working, single process |
+| Live channel chat (WebSocket) | Working. Reconnects on its own, acks sends, fills gaps after a reconnect |
+| Several API processes | Working with `REDIS_URL`, falls back to one process without it |
 | Cursor pagination on history | Server side yes, client ignores cursor |
 
 ## Not built yet
 
 | Claim you might expect | Reality |
 | --- | --- |
-| Redis pub/sub | Container only. No app code. |
 | Presence | Not implemented |
-| Direct messages in the UI | REST exists. Socket handlers are stubs. No UI. |
-| Multi-instance fan-out | Impossible until Redis (or similar) is wired |
+| Direct messages in the UI | REST exists. The socket answers `not_supported`. No UI. |
+| History past the newest 50 | Server supports a cursor. The client does not send it. A reconnect after a long outage fills at most 50 missed messages. |
+| Message rate limit | Only a cap on frames in flight per socket |
 
 ## Repo layout
 
@@ -73,6 +74,9 @@ Edit `apps/server/.env`:
 | `PORT` | no | API port (default `3000`) |
 | `CLIENT_ORIGIN` | no | Credentialed CORS origins (default `http://localhost:3008,http://127.0.0.1:3008`) |
 | `COOKIE_SECURE` | no | `true` only on HTTPS |
+| `REDIS_URL` | no | Share realtime events between API processes (inside Compose the host is `redis`, not `localhost`) |
+| `WS_HEARTBEAT_MS` | no | Ping interval, default `30000`. A socket with no pong after one interval is closed |
+| `WS_MEMBERSHIP_RECHECK_MS` | no | How often subscribed users are re-checked against channel membership, default `60000` |
 | `CLIENT_ID` / `CLIENT_SECRET` / `GITHUB_REDIRECT_URI` | no | GitHub OAuth; omit for email/password only |
 
 Web:
@@ -87,7 +91,7 @@ Use **either** `localhost` **or** `127.0.0.1` consistently in the browser and in
 ### 3. Postgres
 
 ```bash
-# Postgres only — Redis is unused by the app
+# Postgres only. Add `redis` to the command if you set REDIS_URL.
 docker compose up postgres -d
 ```
 
@@ -140,19 +144,33 @@ Then in the UI: sign in → create workspace → open channel. History loads ove
 docker compose up --build
 ```
 
-Needs a filled `apps/server/.env`. Starts API, Postgres, and unused Redis. Web is **not** a Compose service — still run `bun run dev:web`.
+Needs a filled `apps/server/.env`. Starts API, Postgres, and Redis. Web is **not** a Compose service — still run `bun run dev:web`.
 
 ## Realtime model
 
 History comes over HTTP. Live messages come over WebSocket.
 
-1. Browser opens `ws://…` with the `jwt_token` cookie on upgrade.
-2. Client sends `join_channel`.
-3. Client sends `send_message`.
-4. Server writes to Postgres, then fans out `new_message` to sockets in that channel's set.
+1. Browser opens `ws://...` with the `jwt_token` cookie. The server checks the `Origin` header against `CLIENT_ORIGIN` first, then the JWT.
+2. Client sends `join_channel` and gets `join_channel_ack`. It then fetches history, so nothing sent after the join is missed. Live and fetched messages are merged by id.
+3. Client sends `send_message` with a `clientMessageId`. The server replies `send_message_ack` with the saved id, or an `error` frame carrying the same `clientMessageId`.
+4. The server saves the message once, in `services/message.service.ts`, then publishes it on the event bus. REST (`POST /channel/:id/messages`) uses the same function, so both paths reach live sockets.
+5. Every API process receives the event and sends `new_message` to its own sockets in that channel. Without Redis the bus is in-process.
 
-That set lives in process memory. A second API process will not see it.
+Rules the server enforces:
+
+| Rule | Detail |
+| --- | --- |
+| Frame shape | zod schema in `socket/schema.ts`. Bad JSON, unknown types, and bad fields get an `error` frame with a `code` |
+| Size | Frames over 16 KB close the socket with code 1009. Message content is capped at 4000 characters on REST and the socket |
+| Order | One frame at a time per socket, so a leave cannot overtake a join |
+| Liveness | Server pings every `WS_HEARTBEAT_MS`. A peer that misses a pong is terminated |
+| Session | Tokens expire after 7 days and the socket closes with code 4401 at that moment. Logout closes the sockets of that session on every process |
+| Membership | Checked on join and on every send. Subscribed users are re-checked every `WS_MEMBERSHIP_RECHECK_MS` and removed users get `removed_from_channel` |
+
+Close code 4401 tells the client not to reconnect. Any other close makes the client retry with exponential backoff and jitter (500 ms up to 15 s) and rejoin its channel.
+
+Bun's `ws` ignores the `maxPayload` option, so the size limit is also checked in code. A frame is fully received before it is rejected. Bun's own ceiling applies to how large that frame can be.
 
 ## Status
 
-Work in progress. Next work deepens the socket (honest UI, reconnect, heartbeats, then Redis), not a wider chat feature set.
+Work in progress. The socket now has validation, acks, reconnect, heartbeats, and Redis fan-out. Next is presence and direct messages over the socket.

@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
 import { message_schema, new_channel_schema } from "../types/request.schema";
 import { prisma } from "../db";
+import { ChannelAccessError } from "../services/channel-access";
+import { sendChannelMessage } from "../services/message.service";
 
 export async function createChannel(req: Request, res: Response) {
     const parsedBody = new_channel_schema.safeParse(req.body);
@@ -135,20 +137,18 @@ export async function getMessages(req: Request, res: Response) {
 export async function sendMessages(req: Request, res: Response) {
     const channelId = req.params.id as string;
     const content = message_schema.safeParse(req.body);
-    const senderId = req.userId;
 
     if(!content.success) {
-        res.status(400).json({ message: "Invalid message content" });
+        res.status(400).json({ message: content.error.issues[0]?.message ?? "Invalid message content" });
         return;
     }
 
     try {
-        const response = await prisma.message.create({
-            data: {
-                content: content.data.content,
-                senderId: senderId,
-                channelId: channelId,
-            }
+        // Same path the websocket uses, so the message also reaches live subscribers.
+        const response = await sendChannelMessage({
+            userId: req.userId,
+            channelId,
+            content: content.data.content,
         });
 
         res.status(201).json({
@@ -158,6 +158,11 @@ export async function sendMessages(req: Request, res: Response) {
         return;
     }
     catch(e) {
+        if (e instanceof ChannelAccessError) {
+            res.status(e.status).json({ message: e.message });
+            return;
+        }
+
         console.error(e);
         res.status(500).json({
             message: "Failed to send message. Please try again.",

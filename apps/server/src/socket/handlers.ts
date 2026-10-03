@@ -1,176 +1,72 @@
-import WebSocket from "ws";
-import type { ClientMessage } from "./types";
-import { prisma } from "../db";
-
+import { WebSocket } from "ws";
+import type { ClientFrame } from "./schema";
 import type { AuthenticatedWebSocket } from "./types";
-import { channelSubscriptions } from "./state"; 
+import { assertChannelAccess, ChannelAccessError } from "../services/channel-access";
+import { sendChannelMessage } from "../services/message.service";
+import { sendError, sendFrame, subscribe, unsubscribe } from "./state";
 
-export async function handleJoinChannel(ws: AuthenticatedWebSocket, payload: ClientMessage, userId: string) {
+type Payload<T extends ClientFrame["type"]> = Extract<ClientFrame, { type: T }>["payload"];
+
+export async function handleJoinChannel(ws: AuthenticatedWebSocket, payload: Payload<"join_channel">) {
+    const { channelId, workspaceId } = payload;
+
     try {
-        const { channelId, workspaceId } = payload;
-
-        const channel = await prisma.channel.findUnique({
-            where: {
-                id: channelId
-            }
-        });
-
-        if (!channel) {
-            ws.send(JSON.stringify({ type: "error", message: "Channel not found" }));
+        await assertChannelAccess(ws.userId, channelId, workspaceId);
+    } catch (err) {
+        if (err instanceof ChannelAccessError) {
+            sendError(ws, err.code, err.message);
             return;
         }
-
-        if (channel.workspaceId !== workspaceId) {
-            ws.send(JSON.stringify({ type: "error", message: "Channel does not belong to this workspace" }));
-            return;
-        }
-
-        const workspaceMember = await prisma.workspaceMember.findUnique({
-            where: {
-                userId_workspaceId: {
-                    userId: userId,
-                    workspaceId: workspaceId
-                }
-            }
-        });
-
-        if (!workspaceMember) {
-            ws.send(JSON.stringify({ type: "error", message: "You are not a member of this workspace" }));
-            return;
-        }
-
-        const channelMembership = await prisma.channelMember.findUnique({
-            where: {
-                userId_channelId: {
-                    userId: userId,
-                    channelId: channelId
-                }
-            }
-        });
-
-        if (!channelMembership) {
-            ws.send(JSON.stringify({ type: "error", message: "Not a member of this channel" }));
-            return;
-        }
-
-        let subscribers = channelSubscriptions.get(channelId);
-        if (!subscribers) {
-            subscribers = new Set<AuthenticatedWebSocket>();
-            channelSubscriptions.set(channelId, subscribers);
-        }
-        subscribers!.add(ws);
-
-        ws.send(JSON.stringify({ type: "join_channel_ack", message: "Successfully joined channel", channelId }));
-
-        // TODO: Notify other users in the channel.
-
-    } catch (error) {
-        ws.send(JSON.stringify({ type: "error", message: "An unknown error occurred joining the channel" }));
-        console.error("handleJoinChannel error:", error);
+        throw err;
     }
+
+    // The socket may have closed while the checks above were running. Adding it now
+    // would leave a dead entry in the subscriber set.
+    if (ws.readyState !== WebSocket.OPEN) return;
+
+    subscribe(channelId, ws);
+    sendFrame(ws, { type: "join_channel_ack", message: "Successfully joined channel", channelId });
 }
 
-export async function handleSendMessage(ws: WebSocket, payload: ClientMessage, userId: string) {
+export async function handleSendMessage(ws: AuthenticatedWebSocket, payload: Payload<"send_message">) {
+    const { channelId, workspaceId, content, clientMessageId } = payload;
+
     try {
-        const { channelId, workspaceId, content } = payload;
-        
-        if(!content) {
-            ws.send(JSON.stringify({ type: "error", message: "Content not found" }))
-            return;
-        }
-
-        const channel = await prisma.channel.findUnique({
-            where: {
-                id: channelId
-            }
+        const message = await sendChannelMessage({
+            userId: ws.userId,
+            channelId,
+            workspaceId,
+            content,
         });
 
-
-        if (!channel) {
-            ws.send(JSON.stringify({ type: "error", message: "Channel not found" }));
-            return;
-        }
-
-        if (channel.workspaceId !== workspaceId) {
-            ws.send(JSON.stringify({ type: "error", message: "Channel does not belong to this workspace" }));
-            return;
-        }
-
-        const channelMembership = await prisma.channelMember.findUnique({
-            where: {
-                userId_channelId: {
-                    userId: userId,
-                    channelId: channelId
-                }
-            }
+        sendFrame(ws, {
+            type: "send_message_ack",
+            channelId,
+            messageId: message.id,
+            ...(clientMessageId ? { clientMessageId } : {}),
         });
-
-        if (!channelMembership) {
-            ws.send(JSON.stringify({ type: "error", message: "Not a member of this channel" }));
+    } catch (err) {
+        if (err instanceof ChannelAccessError) {
+            sendError(ws, err.code, err.message, { clientMessageId });
             return;
         }
-
-        const response = await prisma.message.create({
-            data:{
-                content: content,
-                senderId: userId,
-                channelId: channelId,
-            },
-            include: { sender: { select: { username: true } } }
-        })
-
-        const subscribers = channelSubscriptions.get(channelId);
-
-        if (subscribers) {
-            const messagePayload = {
-                type: "new_message",
-                payload: {
-                    id: response.id,
-                    channelId: response.channelId,
-                    senderId: response.senderId,
-                    senderUsername: response.sender.username,
-                    content: response.content,
-                    createdAt: response.createdAt
-                }
-            };
-
-            for (const subscriber of subscribers) {
-                if (subscriber.readyState === WebSocket.OPEN) {
-                    subscriber.send(JSON.stringify(messagePayload));
-                }
-            }
-        }
-    }
-    catch(error) {
-        ws.send(JSON.stringify({ type: "error", message: "An unknown error occurred sending to the channel" }));
-        console.error("handleSendMessage error:", error);
+        throw err;
     }
 }
 
-export async function handleSendDirectMessage(ws: WebSocket, payload: ClientMessage, userId: string) {
-    // TODO: Implement logic for sending a direct message
-    ws.send(JSON.stringify({ type: "send_direct_message_ack", message: "Direct message sent (stub)" }));
+export async function handleLeaveChannel(ws: AuthenticatedWebSocket, payload: Payload<"leave_channel">) {
+    unsubscribe(payload.channelId, ws);
+    sendFrame(ws, { type: "leave_channel_ack", channelId: payload.channelId });
 }
 
-export async function handleLeaveChannel(ws: AuthenticatedWebSocket, payload: ClientMessage, userId: string) {
-    const { channelId } = payload;
-    if (!channelId) {
-        ws.send(JSON.stringify({ type: "error", message: "Missing channelId in leave_channel payload" }));
-        return;
-    }
+// Direct messages work over REST (POST /dm/:userId). The socket does not carry them yet,
+// and it says so instead of pretending the message went out.
+const DM_NOT_SUPPORTED = "Direct messages are not available over the socket yet. Use POST /dm/:userId.";
 
-    let subscribers = channelSubscriptions.get(channelId);
-    if (subscribers) {
-        subscribers.delete(ws);
-        // Optionally, clean up empty sets
-        if (subscribers.size === 0) {
-            channelSubscriptions.delete(channelId);
-        }
-    }
-    ws.send(JSON.stringify({ type: "leave_channel_ack", message: "Left channel (stub)" }));
+export async function handleSendDirectMessage(ws: AuthenticatedWebSocket) {
+    sendError(ws, "not_supported", DM_NOT_SUPPORTED);
 }
 
-export async function handleLeaveDirectMessage(ws: WebSocket, payload: ClientMessage, userId: string) {
-    // TODO: Implement logic for leaving a direct message
-    ws.send(JSON.stringify({ type: "leave_direct_message_ack", message: "Left direct message (stub)" }));
+export async function handleLeaveDirectMessage(ws: AuthenticatedWebSocket) {
+    sendError(ws, "not_supported", DM_NOT_SUPPORTED);
 }

@@ -8,7 +8,8 @@ interface MessageInputProps {
   channelName: string;
   className?: string;
   disabled?: boolean;
-  onSend?: (message: string) => void;
+  /** Return false when the message could not be sent, so the draft stays in the box. */
+  onSend?: (message: string) => boolean | void;
 }
 
 export function MessageInput({
@@ -27,7 +28,7 @@ export function MessageInput({
   function handleSubmit() {
     const trimmed = value.trim();
     if (!trimmed || disabled) return;
-    onSend?.(trimmed);
+    if (onSend?.(trimmed) === false) return;
     setValue("");
   }
 

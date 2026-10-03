@@ -33,4 +33,10 @@ export const env = {
     githubRedirectUri,
     databaseUrl: readRequiredEnv("DATABASE_URL"),
     cookieSecure: process.env.COOKIE_SECURE === "true",
+    /** Optional. When set, realtime events fan out through Redis so several API processes can share channels. */
+    redisUrl: process.env.REDIS_URL || undefined,
+    /** Ping interval. A socket that misses one full interval without a pong is terminated. */
+    wsHeartbeatMs: Number(process.env.WS_HEARTBEAT_MS) || 30_000,
+    /** How often subscribed users are re-checked against channel membership. */
+    wsMembershipRecheckMs: Number(process.env.WS_MEMBERSHIP_RECHECK_MS) || 60_000,
 };
