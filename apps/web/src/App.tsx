@@ -3,7 +3,11 @@ import { useEffect, useMemo, useState } from "react";
 import { CreateWorkspaceModal } from "@/components/workspace/CreateWorkspaceModal";
 import { InviteLinkPanel } from "@/components/workspace/InviteLinkPanel";
 import { JoinWorkspaceScreen } from "@/components/workspace/JoinWorkspaceScreen";
-import { navigateTo, useHashRoute } from "@/lib/hashRoute";
+import {
+  navigateTo,
+  useHashRoute,
+  useHashWorkspaceId,
+} from "@/lib/hashRoute";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { LandingPage } from "@/pages/LandingPage";
 import { SigninPage } from "@/pages/SigninPage";
@@ -16,15 +20,18 @@ import {
   getApiErrorMessage,
   getCurrentUser,
   joinWorkspace,
+  listWorkspaces,
   logout,
   signin,
   signup,
+  type WorkspaceSummary,
 } from "./lib/api";
 
 export function App() {
   const route = useHashRoute();
-  const [workspaceName, setWorkspaceName] = useState("core-infrastructure");
-  const [workspaceId, setWorkspaceId] = useState("");
+  const workspaceId = useHashWorkspaceId();
+  const [workspaceName, setWorkspaceName] = useState("");
+  const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
   const [inviteToken, setInviteToken] = useState("");
   const [workspaceStep, setWorkspaceStep] = useState<"create" | "invite" | null>(
     null,
@@ -52,6 +59,39 @@ export function App() {
       navigateTo("/signin");
     }
   }, [route, sessionChecked, currentUser]);
+
+  // The URL carries the workspace id (#/app/<id>) so a refresh keeps it. When it
+  // is missing or not one of the user's workspaces, fall back to their first
+  // one, or to workspace creation if they have none.
+  useEffect(() => {
+    if (route !== "/app" || !currentUser) return;
+    let cancelled = false;
+
+    listWorkspaces()
+      .then((list) => {
+        if (cancelled) return;
+        setWorkspaces(list);
+        if (list.some((workspace) => workspace.id === workspaceId)) return;
+
+        const fallback = list[0];
+        if (fallback) {
+          navigateTo("/app", { workspaceId: fallback.id, replace: true });
+        } else {
+          navigateTo("/workspace/create", { replace: true });
+        }
+      })
+      .catch(() => {
+        // Leave the dashboard empty. A 401 is handled by the session check.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [route, currentUser, workspaceId]);
+
+  const activeWorkspace = workspaces.find(
+    (workspace) => workspace.id === workspaceId,
+  );
 
   if (route === "/signup") {
     return (
@@ -103,8 +143,7 @@ export function App() {
         onSubmit={async (inviteCode) => {
           const { workspaceId: joinedWorkspaceId } =
             await joinWorkspace(inviteCode);
-          setWorkspaceId(joinedWorkspaceId);
-          navigateTo("/app");
+          navigateTo("/app", { workspaceId: joinedWorkspaceId });
         }}
       />
     );
@@ -117,7 +156,7 @@ export function App() {
       <>
         <DashboardPage
           username={currentUser.username}
-          workspaceName={workspaceName}
+          workspaceName={activeWorkspace?.name ?? ""}
           workspaceId={workspaceId}
           onLogout={async () => {
             await logout();
@@ -134,9 +173,9 @@ export function App() {
             const { workspaceId: newWorkspaceId } = await createWorkspace(name);
             const { token } = await createInvite(newWorkspaceId);
             setWorkspaceName(name);
-            setWorkspaceId(newWorkspaceId);
             setInviteToken(token);
             setWorkspaceStep("invite");
+            navigateTo("/app", { workspaceId: newWorkspaceId });
           }}
         />
         {workspaceStep === "invite" && (
@@ -144,10 +183,7 @@ export function App() {
             <InviteLinkPanel
               workspaceName={workspaceName}
               inviteUrl={inviteUrl}
-              onContinue={() => {
-                setWorkspaceStep(null);
-                navigateTo("/app");
-              }}
+              onContinue={() => setWorkspaceStep(null)}
             />
           </div>
         )}
@@ -173,9 +209,9 @@ export function App() {
                 await createWorkspace(name);
               const { token } = await createInvite(newWorkspaceId);
               setWorkspaceName(name);
-              setWorkspaceId(newWorkspaceId);
               setInviteToken(token);
               setWorkspaceStep("invite");
+              navigateTo("/app", { workspaceId: newWorkspaceId });
             }}
           />
         )}

@@ -38,7 +38,16 @@ function send(type: string, payload: Record<string, unknown>) {
 
 /** Prefer BUN_PUBLIC_WS_URL; otherwise derive ws(s) from API_URL. */
 export function getWsUrl(): string {
-  const fromEnv = process.env.BUN_PUBLIC_WS_URL?.replace(/\/$/, "");
+  // Bun inlines process.env.BUN_PUBLIC_* only when the variable is set. When it
+  // is unset the reference survives into the bundle and `process` does not
+  // exist in the browser, so a bare read throws and takes the dashboard down.
+  let configured: string | undefined;
+  try {
+    configured = process.env.BUN_PUBLIC_WS_URL;
+  } catch {
+    configured = undefined;
+  }
+  const fromEnv = configured?.replace(/\/$/, "");
   if (fromEnv) return fromEnv;
   return API_URL.replace(/^http/, "ws");
 }
@@ -69,11 +78,19 @@ export function connectSocket(): void {
   const wsUrl = getWsUrl();
   setStatus("connecting");
   // Browser sends jwt_token cookie for the API host on upgrade (same as REST).
-  socket = new WebSocket(wsUrl);
+  const ws = new WebSocket(wsUrl);
+  socket = ws;
 
-  socket.addEventListener("open", () => setStatus("connected"));
+  // A replaced socket still fires close/error later (React StrictMode runs
+  // connect, disconnect, connect). Those events must not touch the new socket.
+  const isCurrent = () => socket === ws;
 
-  socket.addEventListener("message", (event) => {
+  ws.addEventListener("open", () => {
+    if (isCurrent()) setStatus("connected");
+  });
+
+  ws.addEventListener("message", (event) => {
+    if (!isCurrent()) return;
     try {
       const parsed = JSON.parse(event.data) as IncomingMessage;
       messageListeners.forEach((listener) => listener(parsed));
@@ -82,13 +99,14 @@ export function connectSocket(): void {
     }
   });
 
-  socket.addEventListener("close", () => {
+  ws.addEventListener("close", () => {
+    if (!isCurrent()) return;
     socket = null;
     setStatus("disconnected");
   });
 
-  socket.addEventListener("error", () => {
-    setStatus("disconnected");
+  ws.addEventListener("error", () => {
+    if (isCurrent()) setStatus("disconnected");
   });
 }
 
