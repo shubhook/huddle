@@ -17,6 +17,8 @@ model User {
   username               String          @unique
   email                  String          @unique
   hashedPassword         String?
+  /// GitHub's numeric user id. Sign-in with GitHub matches on this, never on email alone.
+  githubId               String?         @unique
   createdAt              DateTime        @default(now())
 
   workspaces             WorkspaceMember[]

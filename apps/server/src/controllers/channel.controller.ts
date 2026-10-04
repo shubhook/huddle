@@ -7,7 +7,10 @@ import { sendChannelMessage } from "../services/message.service";
 export async function createChannel(req: Request, res: Response) {
     const parsedBody = new_channel_schema.safeParse(req.body);
     if(!parsedBody.success) {
-        res.status(400).json({ error: parsedBody.error });
+        res.status(400).json({
+            error: parsedBody.error,
+            message: parsedBody.error.issues[0]?.message ?? "Invalid channel name"
+        });
         return;
     }
 
@@ -50,6 +53,11 @@ export async function createChannel(req: Request, res: Response) {
         
     }
     catch(e) {
+        if ((e as { code?: string }).code === "P2002") {
+            res.status(409).json({ message: "A channel with that name already exists." });
+            return;
+        }
+
         console.error(e)
         res.status(500).json({ 
             message: "Failed to create channel. Please try again.",
