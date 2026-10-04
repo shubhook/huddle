@@ -27,7 +27,7 @@ export function TopBar({
       className={cn(
         "flex shrink-0 items-center justify-between",
         "border-b border-hairline bg-paper/80",
-        "px-4 py-2.5",
+        "h-12 px-4",
         className,
       )}
     >
