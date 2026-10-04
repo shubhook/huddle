@@ -72,11 +72,12 @@ function mergeMessages(
 
 export function DashboardPage({
   username = "you",
-  workspaceName = "studio",
+  workspaceName = "",
   workspaceId,
   onLogout,
   onWorkspaceClick,
 }: DashboardPageProps) {
+  const [loadedWorkspaceName, setLoadedWorkspaceName] = useState("");
   const [channels, setChannels] = useState<Channel[]>([]);
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -107,6 +108,7 @@ export function DashboardPage({
     async function loadWorkspace() {
       try {
         const workspace = await getWorkspace(workspaceId);
+        setLoadedWorkspaceName(workspace.general.name);
         setChannels(workspace.channels);
         setActiveChannelId(workspace.channels[0]?.id ?? null);
       } catch {
@@ -292,7 +294,7 @@ export function DashboardPage({
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar
-        workspaceName={workspaceName}
+        workspaceName={workspaceName || loadedWorkspaceName}
         channels={[...channels]}
         activeChannelId={activeChannelId ?? undefined}
         username={username}

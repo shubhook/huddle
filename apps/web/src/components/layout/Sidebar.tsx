@@ -68,7 +68,7 @@ export function Sidebar({
       />
 
       <div className="flex flex-1 flex-col overflow-y-auto py-2.5">
-        <div className="flex items-center justify-between px-3 pb-1.5">
+        <div className="flex items-center justify-between px-4 pb-1.5">
           <p className="font-mono text-[10px] font-medium uppercase tracking-[0.06em] text-sidebar-muted">
             Channels
           </p>
@@ -129,7 +129,7 @@ export function Sidebar({
       </div>
 
       {username && (
-        <div className="flex items-center justify-between gap-2 border-t border-sidebar-border px-3 py-2.5">
+        <div className="flex items-center justify-between gap-2 border-t border-sidebar-border px-4 py-2.5">
           <span className="truncate text-xs text-sidebar-muted">{username}</span>
           <button
             type="button"

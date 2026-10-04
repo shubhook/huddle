@@ -19,7 +19,7 @@ export function WorkspaceSwitcher({
       onClick={onClick}
       className={cn(
         "flex w-full items-center justify-between gap-2",
-        "border-b border-sidebar-border px-3 py-2.5 text-left",
+        "h-12 shrink-0 border-b border-sidebar-border px-4 text-left",
         "transition-colors hover:bg-sidebar-hover",
         className,
       )}
