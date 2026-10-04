@@ -6,7 +6,7 @@ import * as arctic from "arctic";
 import { prisma } from "../db";
 import type { GithubUser, GitHubEmail } from "../types/oauth.types";
 import { generateToken } from "../utils/auth";
-import { AUTH_COOKIE, clearAuthCookie, setAuthCookie } from "../utils/cookies";
+import { AUTH_COOKIE, clearAuthCookie, crossSiteSameSite, setAuthCookie } from "../utils/cookies";
 import { env } from "../utils/env";
 import { endSessionSockets } from "../socket/session";
 
@@ -50,7 +50,7 @@ export async function initiateGithubAuth(req: Request, res: Response) {
 
     res.cookie("github_oauth_state", state, {
         httpOnly: true,
-        sameSite: "lax",
+        sameSite: crossSiteSameSite,
         path: "/",
         secure: env.cookieSecure,
     });

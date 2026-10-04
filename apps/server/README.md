@@ -12,7 +12,7 @@ HTTP API and WebSocket layer for Huddle.
 | HTTP | Express 5 |
 | WebSocket | `ws` (`noServer` + HTTP upgrade) |
 | DB | PostgreSQL + Prisma |
-| Auth | httpOnly `jwt_token` cookie (`SameSite=Lax`, path `/`) |
+| Auth | httpOnly `jwt_token` cookie (`SameSite=None; Secure` over HTTPS, `Lax` on local HTTP, path `/`) |
 
 ## Run
 
