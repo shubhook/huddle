@@ -21,6 +21,8 @@ function normalizeHash(hash: string): AppRoute {
   const path = hash.replace(/^#/, "") || "/";
   if (path === "/join" || path.startsWith("/join/")) return "/join";
   if (path.startsWith("/app/")) return "/app";
+  // The server sends GitHub failures to #/signin/<code>.
+  if (path.startsWith("/signin/")) return "/signin";
   return ROUTES.includes(path as AppRoute) ? (path as AppRoute) : "/";
 }
 
@@ -36,6 +38,13 @@ export function workspaceIdFromHash(hash = window.location.hash): string {
   if (!path.startsWith("/app/")) return "";
   const id = path.slice("/app/".length).split("/")[0] ?? "";
   return decodeURIComponent(id);
+}
+
+/** Failure code from `#/signin/<code>`, or "" when the hash has none. */
+export function authNoticeFromHash(hash = window.location.hash): string {
+  const path = hash.replace(/^#/, "");
+  if (!path.startsWith("/signin/")) return "";
+  return decodeURIComponent(path.slice("/signin/".length).split("/")[0] ?? "");
 }
 
 interface NavigateOptions {
@@ -74,6 +83,20 @@ export function useHashWorkspaceId(): string {
   }, []);
 
   return workspaceId;
+}
+
+export function useHashAuthNotice(): string {
+  const [notice, setNotice] = useState(() =>
+    typeof window === "undefined" ? "" : authNoticeFromHash(),
+  );
+
+  useEffect(() => {
+    const handleHashChange = () => setNotice(authNoticeFromHash());
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
+  return notice;
 }
 
 export function useHashRoute(): AppRoute {

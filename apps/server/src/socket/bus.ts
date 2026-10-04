@@ -9,7 +9,7 @@ import { env } from "../utils/env";
  */
 export type BusEvent =
     | { kind: "channel_frame"; channelId: string; frame: unknown }
-    | { kind: "revoke_token"; tokenHash: string };
+    | { kind: "revoke_sessions"; sessionIds: string[] };
 
 type BusHandler = (event: BusEvent) => void;
 type RedisClient = ReturnType<typeof createClient>;
@@ -65,6 +65,33 @@ export async function publishEvent(event: BusEvent): Promise<void> {
     }
 
     dispatch(event);
+}
+
+/**
+ * Fixed-window counter in Redis, shared by every API process. The key is created with its
+ * expiry in the same transaction as the increment, so a crash between the two cannot leave
+ * a counter that never resets. Returns null when Redis is unavailable, and the caller
+ * counts in memory instead.
+ */
+export async function incrementCounter(
+    key: string,
+    windowMs: number,
+): Promise<{ count: number; ttlMs: number } | null> {
+    if (!publisher?.isReady) return null;
+
+    try {
+        const [, count, ttlMs] = (await publisher
+            .multi()
+            .set(key, 0, { expiration: { type: "PX", value: windowMs }, condition: "NX" })
+            .incr(key)
+            .pTTL(key)
+            .exec()) as unknown as [unknown, number, number];
+
+        return { count, ttlMs: ttlMs > 0 ? ttlMs : windowMs };
+    } catch (err) {
+        warn("Redis counter failed, counting in memory", err);
+        return null;
+    }
 }
 
 /** Runs in the background. The server keeps working while Redis is unreachable. */

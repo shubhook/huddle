@@ -1,7 +1,8 @@
 export interface GithubUser {
-    id: string;
+    /** GitHub sends a number. Store it as a string. */
+    id: number | string;
     login: string;
-    email: string;
+    email: string | null;
     name: string | null;
     avatar_url: string;
 }

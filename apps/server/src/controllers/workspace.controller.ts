@@ -93,6 +93,50 @@ export async function listWorkspaces(req: Request, res: Response) {
     }
 }
 
+const MAX_ACTIVE_INVITES = 25;
+
+export async function listInvites(req: Request, res: Response) {
+    const workspaceId = req.params.id as string;
+
+    try {
+        const invites = await prisma.workspaceInvites.findMany({
+            where: { workspaceId, expiresAt: { gt: new Date() } },
+            orderBy: { expiresAt: "desc" },
+            // The token is a credential. Owners see who made an invite and when it ends, not the secret.
+            select: { id: true, createdId: true, expiresAt: true }
+        });
+
+        res.status(200).json({ invites });
+    }
+    catch(e) {
+        console.error(e);
+        res.status(500).json({ message: "Failed to list invites. Please try again." });
+    }
+}
+
+export async function revokeInvite(req: Request, res: Response) {
+    const workspaceId = req.params.id as string;
+    const inviteId = req.params.inviteId as string;
+
+    try {
+        // Scoped to the workspace in the URL, so an owner cannot touch another workspace's invites.
+        const { count } = await prisma.workspaceInvites.deleteMany({
+            where: { id: inviteId, workspaceId }
+        });
+
+        if (count === 0) {
+            res.status(404).json({ message: "Invite not found" });
+            return;
+        }
+
+        res.status(200).json({ message: "Invite revoked" });
+    }
+    catch(e) {
+        console.error(e);
+        res.status(500).json({ message: "Failed to revoke invite. Please try again." });
+    }
+}
+
 export async function createInvites(req: Request, res: Response) {
     const rawWorkspaceId = req.params.id;
     const workspaceId = Array.isArray(rawWorkspaceId) ? rawWorkspaceId[0] : rawWorkspaceId;
@@ -105,6 +149,18 @@ export async function createInvites(req: Request, res: Response) {
     }
 
     try {
+        // Every invite is a key to the workspace until it expires, so keep the pile small.
+        const active = await prisma.workspaceInvites.count({
+            where: { workspaceId, expiresAt: { gt: new Date() } }
+        });
+
+        if (active >= MAX_ACTIVE_INVITES) {
+            res.status(409).json({
+                message: `This workspace already has ${MAX_ACTIVE_INVITES} active invites. Revoke one first.`
+            });
+            return;
+        }
+
         const hash: string = crypto.randomUUID().toString();
         const response = await prisma.workspaceInvites.create({
             data: {
@@ -198,6 +254,12 @@ export async function joinWorkspace(req: Request, res: Response) {
         res.status(201).json({ message: `Joined workspace`, workspaceId: workspace.workspaceId });
     }
     catch (e) {
+        // Two joins racing past the "already a member" check hit the unique index.
+        if ((e as { code?: string }).code === "P2002") {
+            res.status(409).json({ message: `User already exists in this workspace` });
+            return;
+        }
+
         console.error(e);
         res.status(500).json({ message: `Failed to join workspace. Please try again.` });
     }

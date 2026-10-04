@@ -5,7 +5,7 @@ import { MessageInput } from "@/components/chat/MessageInput";
 import { MessageList } from "@/components/chat/MessageList";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
-import { getMessages, getWorkspace } from "@/lib/api";
+import { createChannel, getApiErrorMessage, getMessages, getWorkspace } from "@/lib/api";
 import {
   connectSocket,
   disconnectSocket,
@@ -269,6 +269,26 @@ export function DashboardPage({
     return true;
   }
 
+  /** Returns false when the channel could not be created, so the sidebar keeps the draft name. */
+  async function handleCreateChannel(name: string): Promise<boolean> {
+    if (!workspaceId) return false;
+
+    try {
+      const channel = await createChannel(workspaceId, name);
+      // The creator is added as a member server-side, so it is safe to open now.
+      setChannels((current) =>
+        current.some((existing) => existing.id === channel.id)
+          ? current
+          : [...current, { id: channel.id, name: channel.name }],
+      );
+      setActiveChannelId(channel.id);
+      return true;
+    } catch (error) {
+      setNotice(getApiErrorMessage(error, "Could not create channel."));
+      return false;
+    }
+  }
+
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar
@@ -277,6 +297,7 @@ export function DashboardPage({
         activeChannelId={activeChannelId ?? undefined}
         username={username}
         onChannelSelect={setActiveChannelId}
+        onCreateChannel={handleCreateChannel}
         onWorkspaceClick={onWorkspaceClick}
         onLogout={onLogout}
       />

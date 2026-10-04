@@ -14,7 +14,13 @@ export const new_workspace_schema = z.object({
 });
 
 export const new_channel_schema = z.object({
-    name: z.string().min(1, "name is required")
+    name: z
+        .string()
+        .trim()
+        .min(1, "name is required")
+        .max(80, "name must be at most 80 characters")
+        // Control characters can forge extra lines in logs and break layouts.
+        .refine((value) => !/\p{Cc}/u.test(value), "name cannot contain control characters")
 });
 
 export const message_schema = z.object({

@@ -5,6 +5,7 @@ import { InviteLinkPanel } from "@/components/workspace/InviteLinkPanel";
 import { JoinWorkspaceScreen } from "@/components/workspace/JoinWorkspaceScreen";
 import {
   navigateTo,
+  useHashAuthNotice,
   useHashRoute,
   useHashWorkspaceId,
 } from "@/lib/hashRoute";
@@ -28,8 +29,20 @@ import {
 } from "./lib/api";
 import { onSessionEnded } from "./lib/ws";
 
+/** What the server means by each code it puts in #/signin/<code> after a GitHub attempt. */
+const GITHUB_SIGNIN_NOTICES: Record<string, string> = {
+  github_denied: "GitHub sign-in was cancelled.",
+  invalid_state: "That GitHub sign-in expired. Please try again.",
+  no_verified_email:
+    "Your GitHub account has no verified email. Verify one on GitHub, then try again.",
+  email_in_use:
+    "An account with that email already exists. Sign in with your password instead.",
+  github_failed: "GitHub sign-in failed. Please try again.",
+};
+
 export function App() {
   const route = useHashRoute();
+  const authNotice = useHashAuthNotice();
   const workspaceId = useHashWorkspaceId();
   const [workspaceName, setWorkspaceName] = useState("");
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
@@ -58,6 +71,14 @@ export function App() {
   // The server ends a socket when its session expires or the user signs out
   // elsewhere. Dropping the user here sends them to sign-in via the effect below.
   useEffect(() => onSessionEnded(() => setCurrentUser(null)), []);
+
+  useEffect(() => {
+    if (route === "/signin" && authNotice) {
+      setSigninError(
+        GITHUB_SIGNIN_NOTICES[authNotice] ?? "Sign-in failed. Please try again.",
+      );
+    }
+  }, [route, authNotice]);
 
   useEffect(() => {
     if (route === "/app" && sessionChecked && !currentUser) {

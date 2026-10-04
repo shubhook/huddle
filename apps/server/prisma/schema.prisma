@@ -17,6 +17,8 @@ model User {
   username               String          @unique
   email                  String          @unique
   hashedPassword         String?
+  /// GitHub's numeric user id. Sign-in with GitHub matches on this, never on email alone.
+  githubId               String?         @unique
   createdAt              DateTime        @default(now())
 
   workspaces             WorkspaceMember[]
@@ -24,6 +26,23 @@ model User {
   messages               Message[]
   sentDirectMessages     DirectMessage[] @relation("SentDMs")
   receivedDirectMessages DirectMessage[] @relation("ReceivedDMs")
+  sessions               Session[]
+}
+
+/// One row per login. The JWT carries this id as `sid`, and every request checks
+/// that the row is still active, so a token can be cancelled before it expires.
+model Session {
+  id        String    @id @default(uuid())
+  userId    String
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Workspace {

@@ -1,18 +1,9 @@
-import jwt from "jsonwebtoken";
-import  type { Request, Response, NextFunction } from "express"
-import { env } from "./env";
+import type { Request, Response, NextFunction } from "express"
 import { AUTH_COOKIE } from "./cookies";
+import { isTokenError, verifyToken, type VerifiedToken } from "./token";
+import { findActiveSession } from "../services/session.service";
 
-export type tokenPayload = {
-    userId: string
-}
-
-/** Tokens used to live forever. Open sockets are closed when this runs out. */
-export const TOKEN_TTL = "7d";
-
-export function generateToken(payload: tokenPayload): string {
-    return jwt.sign(payload, env.JwtSecret, { expiresIn: TOKEN_TTL });
-}
+export type { tokenPayload } from "./token";
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
     const token = req.cookies[AUTH_COOKIE] as string;
@@ -23,17 +14,36 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
         });
         return;
     }
-    
+
+    let decoded: VerifiedToken;
     try {
-        const decoded = jwt.verify(token, env.JwtSecret) as tokenPayload;
-        req.userId = decoded.userId;
-        next();
-        
+        decoded = verifyToken(token);
     } catch(err) {
-        console.log(err);
+        if (!isTokenError(err)) console.error(err);
         res.status(401).json({
             message: "Unauthorised Endpoint"
         });
         return;
+    }
+
+    try {
+        // A signed token is not enough. Logout and revocation work by ending the session row.
+        const session = await findActiveSession(decoded);
+
+        if (!session) {
+            res.status(401).json({
+                message: "Session ended, sign in again"
+            });
+            return;
+        }
+
+        req.userId = session.userId;
+        req.sessionId = session.id;
+        next();
+    } catch(err) {
+        console.error(err);
+        res.status(503).json({
+            message: "Could not verify your session. Try again."
+        });
     }
 }
