@@ -15,6 +15,40 @@ import {
     startSession,
 } from "../services/session.service";
 import { z } from "zod";
+import { timingSafeEqual } from "node:crypto";
+import { resolveGithubUser } from "../services/github-identity";
+
+/**
+ * One message for a taken email and a taken username, so the response does not say which
+ * of them exists. Without email verification the signup response still tells an attacker
+ * that the pair is taken, which is why signup is also rate limited.
+ */
+const TAKEN_MESSAGE = "That email or username is already taken.";
+
+/** Same text for an unknown email, a wrong password, and a GitHub-only account. */
+const INVALID_LOGIN_MESSAGE = "Invalid email or password";
+
+/**
+ * bcrypt takes about the same time on any hash. Comparing against this one when the
+ * account is missing keeps "no such email" from answering faster than "wrong password".
+ */
+const DUMMY_HASH = bcrypt.hashSync("not-a-real-password", 10);
+
+const GITHUB_STATE_COOKIE = "github_oauth_state";
+const GITHUB_STATE_TTL_MS = 10 * 60 * 1000;
+
+const githubStateCookieOptions = {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    path: "/",
+    secure: env.cookieSecure,
+};
+
+const safeEqual = (a: string, b: string) => {
+    const left = Buffer.from(a);
+    const right = Buffer.from(b);
+    return left.length === right.length && timingSafeEqual(left, right);
+};
 
 /** Map Prisma / DB failures to HTTP status + client-safe message. */
 function mapPrismaAuthError(e: unknown): { status: number; message: string } {
@@ -37,7 +71,7 @@ function mapPrismaAuthError(e: unknown): { status: number; message: string } {
     }
 
     if (code === "P2002") {
-        return { status: 409, message: "user already exists" };
+        return { status: 409, message: TAKEN_MESSAGE };
     }
 
     return { status: 500, message: "Internal server error" };
@@ -51,16 +85,21 @@ export async function initiateGithubAuth(req: Request, res: Response) {
 
     const state = arctic.generateState();
 
-    const scope = ["user:email", "user"];
+    // read:user is read-only. The old "user" scope also let this app edit the GitHub profile.
+    const scope = ["read:user", "user:email"];
     const url = github.createAuthorizationURL(state, scope);
 
-    res.cookie("github_oauth_state", state, {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: env.cookieSecure,
+    res.cookie(GITHUB_STATE_COOKIE, state, {
+        ...githubStateCookieOptions,
+        maxAge: GITHUB_STATE_TTL_MS,
     });
     res.redirect(url.toString());
+}
+
+/** Where the browser lands after GitHub. Errors become a code in the hash, never a stack trace. */
+function webUrl(path: string) {
+    const webOrigin = env.clientOrigins[0] ?? "http://localhost:3008";
+    return `${webOrigin}/#${path}`;
 }
 
 export async function handleGithubCallback(req: Request, res: Response) {
@@ -69,72 +108,68 @@ export async function handleGithubCallback(req: Request, res: Response) {
         return;
     }
 
-    const code = req.query.code;
-    const state = req.query.state;
+    const failWith = (code: string) => {
+        res.redirect(webUrl(`/signin/${code}`));
+    };
 
-    const storedState = req.cookies["github_oauth_state"] as string;
+    const { code, state, error } = req.query;
+    const storedState = req.cookies?.[GITHUB_STATE_COOKIE];
 
-    if (code == undefined || storedState == undefined || state != storedState) {
-        throw new Error(`Invalid Request`);
+    // The state is single use, so it goes whether this attempt works or not.
+    res.clearCookie(GITHUB_STATE_COOKIE, githubStateCookieOptions);
+
+    if (typeof error === "string") {
+        failWith("github_denied");
+        return;
+    }
+
+    if (
+        typeof code !== "string" ||
+        typeof state !== "string" ||
+        typeof storedState !== "string" ||
+        !safeEqual(state, storedState)
+    ) {
+        failWith("invalid_state");
+        return;
     }
 
     try {
-        const token = await github.validateAuthorizationCode(code as string);
-        const accessToken = token.accessToken();
+        const token = await github.validateAuthorizationCode(code);
+        const headers = { Authorization: `Bearer ${token.accessToken()}` };
 
-        const response = await fetch("https://api.github.com/user", {
-            headers: {
-                Authorization: `Bearer ${accessToken}`,
-            },
-        });
+        const userResponse = await fetch("https://api.github.com/user", { headers });
+        if (!userResponse.ok) throw new Error(`GitHub /user returned ${userResponse.status}`);
+        const githubUser = (await userResponse.json()) as GithubUser;
 
-        const githubUser = (await response.json()) as GithubUser;
-        let email: string | null = githubUser.email;
+        // Always read the email list. The profile email can be unverified, this one says which are not.
+        const emailResponse = await fetch("https://api.github.com/user/emails", { headers });
+        if (!emailResponse.ok) throw new Error(`GitHub /user/emails returned ${emailResponse.status}`);
+        const emails = (await emailResponse.json()) as GitHubEmail[];
+        const primary = emails.find((entry) => entry.primary && entry.verified);
 
-        if (!email) {
-            const emailResponse = await fetch(
-                "https://api.github.com/user/emails",
-                {
-                    headers: { Authorization: `Bearer ${accessToken}` },
-                },
-            );
-            const emails = (await emailResponse.json()) as GitHubEmail[];
-            const primary = emails.find((e: any) => e.primary && e.verified);
-            email = primary?.email ?? null;
-        }
-
-        if (!email) {
-            res.status(400).json({
-                message: "No email found on GitHub account",
-            });
+        if (!primary) {
+            failWith("no_verified_email");
             return;
         }
 
-        let user = await prisma.user.findUnique({
-            where: {
-                email: email,
-            },
+        const resolved = await resolveGithubUser({
+            githubId: String(githubUser.id),
+            login: githubUser.login,
+            email: primary.email,
         });
 
-        if (!user) {
-            user = await prisma.user.create({
-                data: {
-                    username: githubUser.login,
-                    email: email,
-                },
-            });
+        if ("conflict" in resolved) {
+            failWith("email_in_use");
+            return;
         }
 
-        const BearerToken = await startSession(user.id, req.get("user-agent"));
+        const sessionToken = await startSession(resolved.user.id, req.get("user-agent"));
 
-        setAuthCookie(res, BearerToken);
-        const webOrigin = env.clientOrigins[0] ?? "http://localhost:3008";
-        res.redirect(`${webOrigin}/#/app`);
+        setAuthCookie(res, sessionToken);
+        res.redirect(webUrl("/app"));
     } catch (e) {
-        console.log(e);
-        res.status(400).json({
-            message: "validation error",
-        });
+        console.error(e);
+        failWith("github_failed");
     }
 }
 
@@ -143,16 +178,36 @@ export async function signup(req: Request, res: Response) {
 
     if (!parsedBody.success) {
         res.status(400).json({
-            message: "validation error",
+            // The first problem, in words the form can show as it is.
+            message: parsedBody.error.issues[0]?.message ?? "validation error",
             issues: parsedBody.error.issues,
         });
         return;
     }
 
     const { username, email, password } = parsedBody.data;
+
+    // Hash before looking anything up, so a taken email costs the same time as a free one.
     const hashedPassword = await bcrypt.hash(password, 10);
 
     try {
+        // The unique index is case sensitive. Check case-insensitively so Bob@x.com
+        // and bob@x.com cannot both exist.
+        const existing = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { email: { equals: email, mode: "insensitive" } },
+                    { username: { equals: username, mode: "insensitive" } },
+                ],
+            },
+            select: { id: true },
+        });
+
+        if (existing) {
+            res.status(409).json({ message: TAKEN_MESSAGE });
+            return;
+        }
+
         const user = await prisma.user.create({
             data: {
                 email: email,
@@ -294,7 +349,7 @@ export async function signin(req: Request, res: Response) {
 
     if (!parsedBody.success) {
         res.status(400).json({
-            message: "validation error",
+            message: parsedBody.error.issues[0]?.message ?? "validation error",
             issues: parsedBody.error.issues,
         });
         return;
@@ -303,21 +358,17 @@ export async function signin(req: Request, res: Response) {
     const { email, password } = parsedBody.data;
 
     try {
-        const user = await prisma.user.findUnique({
-            where: {
-                email,
-            },
+        // Accounts made before emails were lowercased may be stored with capitals.
+        const user = await prisma.user.findFirst({
+            where: { email: { equals: email, mode: "insensitive" } },
         });
 
-        if (!user || !user.hashedPassword) {
-            res.status(404).json({ message: "Invalid credentials" });
-            return;
-        }
+        // Always run one bcrypt comparison, whether or not the account exists and
+        // whether or not it has a password (GitHub-only accounts do not).
+        const passwordMatches = await bcrypt.compare(password, user?.hashedPassword ?? DUMMY_HASH);
 
-        const isValid = await bcrypt.compare(password, user.hashedPassword);
-
-        if (!isValid) {
-            res.status(401).json({ message: "Invalid credentials" });
+        if (!user || !user.hashedPassword || !passwordMatches) {
+            res.status(401).json({ message: INVALID_LOGIN_MESSAGE });
             return;
         }
 
