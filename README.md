@@ -160,6 +160,7 @@ Needs a filled `apps/server/.env`. Starts API, Postgres, and Redis. Web is **not
 | Roles | Only an owner can create, list or revoke invites. At most 25 invites can be active. Any member can create channels |
 | Direct messages | Sender and receiver must both belong to the named workspace |
 | Headers | `nosniff`, `X-Frame-Options: DENY`, no referrer, a blocking CSP, `Cache-Control: no-store`, and HSTS when `COOKIE_SECURE=true`. `X-Powered-By` is off |
+| Cross-site requests | POST, PUT, PATCH and DELETE are refused with 403 when the browser's `Origin` (or, without one, `Referer`) is not in `CLIENT_ORIGIN`. With `COOKIE_SECURE=true` the login cookie is `SameSite=None`, so without this check any website could submit a form that joins a workspace or signs the user out everywhere. Requests with neither header, such as curl, are allowed and still need a session |
 | Websocket | Origin allowlist, frame size cap, and the session checks described below |
 
 Known gaps:

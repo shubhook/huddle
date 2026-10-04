@@ -5,7 +5,7 @@ import { github } from "../utils/oauth";
 import * as arctic from "arctic";
 import { prisma } from "../db";
 import type { GithubUser, GitHubEmail } from "../types/oauth.types";
-import { AUTH_COOKIE, clearAuthCookie, setAuthCookie } from "../utils/cookies";
+import { AUTH_COOKIE, clearAuthCookie, crossSiteSameSite, setAuthCookie } from "../utils/cookies";
 import { env } from "../utils/env";
 import { isTokenError, verifyToken } from "../utils/token";
 import {
@@ -37,9 +37,11 @@ const DUMMY_HASH = bcrypt.hashSync("not-a-real-password", 10);
 const GITHUB_STATE_COOKIE = "github_oauth_state";
 const GITHUB_STATE_TTL_MS = 10 * 60 * 1000;
 
+// Shared by setting and clearing, so the clear matches the SameSite the cookie was set with.
+// The OAuth callback is a cross-site redirect from GitHub, hence the cross-site policy.
 const githubStateCookieOptions = {
     httpOnly: true,
-    sameSite: "lax" as const,
+    sameSite: crossSiteSameSite,
     path: "/",
     secure: env.cookieSecure,
 };

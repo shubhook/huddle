@@ -5,6 +5,7 @@ import { appRouter } from "./routes";
 import { setupWebSocket } from "./socket";
 import cors from "cors";
 import { securityHeaders } from "./utils/security-headers";
+import { rejectCrossSiteWrites } from "./utils/csrf";
 
 const app = express();
 const server = setupWebSocket(app);
@@ -19,6 +20,8 @@ app.use(cors({
     origin: env.clientOrigins,
     credentials: true,
 }));
+// After CORS, so preflights still get their headers. Before every route that changes data.
+app.use(rejectCrossSiteWrites);
 
 app.get('/health', (req, res) => {
     res.status(200).json({
