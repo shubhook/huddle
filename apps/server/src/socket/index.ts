@@ -3,8 +3,8 @@ import type { Duplex } from "stream";
 import { type Express } from "express";
 import { WebSocketServer, type RawData } from "ws";
 
-import { env } from "../utils/env";
 import { AUTH_COOKIE } from "../utils/cookies";
+import { isAllowedOrigin } from "../utils/origin";
 import { isTokenError, verifyToken } from "../utils/token";
 import { findActiveSession, SessionInactiveError } from "../services/session.service";
 import { onBusEvent, startBus } from "./bus";
@@ -22,10 +22,6 @@ const parseCookies = (cookieString: string) =>
         })
     );
 
-const normalizeOrigin = (origin: string) => origin.trim().replace(/\/+$/, "").toLowerCase();
-
-// Same list the CORS middleware uses, so REST and the socket accept the same sites.
-const allowedOrigins = new Set(env.clientOrigins.map(normalizeOrigin));
 
 /**
  * Browsers always send Origin on a websocket handshake and page scripts cannot
@@ -35,7 +31,7 @@ const allowedOrigins = new Set(env.clientOrigins.map(normalizeOrigin));
  */
 function isOriginAllowed(origin: string | undefined): boolean {
     if (origin === undefined) return true;
-    return allowedOrigins.has(normalizeOrigin(origin));
+    return isAllowedOrigin(origin);
 }
 
 /** destroy() right after write() drops unsent bytes, so flush with end() and destroy in its callback. */
