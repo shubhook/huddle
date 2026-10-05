@@ -1,24 +1,34 @@
-export function Footer() {
+import { GITHUB_URL, scrollToSection } from "@/components/landing/links";
+
+interface FooterProps {
+  onOpenApp?: () => void;
+}
+
+export function Footer({ onOpenApp }: FooterProps) {
   return (
-    <footer className="w-full border-t border-hairline px-5 py-8">
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <span className="inline-flex items-center gap-2 text-ink">
-          <span
-            aria-hidden
-            className="flex size-5 items-center justify-center rounded-[5px] bg-ink"
-          >
-            <span className="grid grid-cols-2 gap-0.5">
-              <span className="size-1 rounded-[1px] bg-paper" />
-              <span className="size-1 rounded-[1px] bg-paper" />
-              <span className="size-1 rounded-[1px] bg-paper" />
-              <span className="size-1 rounded-[1px] bg-paper" />
-            </span>
-          </span>
-          <span className="text-sm font-semibold tracking-tight">Huddle</span>
+    <footer className="foot">
+      <div className="wrap foot__in">
+        <span className="logo">
+          <span className="logo__mark" aria-hidden />
+          huddle
         </span>
-        <p className="text-xs text-text-placeholder">
-          Built to learn WebSockets. Runs on a cloud server when deployed.
-        </p>
+        <span>© 2026 · Built to learn WebSockets</span>
+        <nav className="foot__links">
+          <a href={GITHUB_URL}>GitHub</a>
+          <a href={`${GITHUB_URL}#readme`}>Docs</a>
+          <a href="#status" onClick={scrollToSection("status")}>
+            Status
+          </a>
+          <a
+            href="#/app"
+            onClick={(e) => {
+              e.preventDefault();
+              onOpenApp?.();
+            }}
+          >
+            Open app
+          </a>
+        </nav>
       </div>
     </footer>
   );

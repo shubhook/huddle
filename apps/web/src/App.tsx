@@ -179,9 +179,8 @@ export function App() {
 
   return (
     <LandingPage
-      onSignIn={() => navigateTo("/signin")}
+      onOpenApp={() => navigateTo("/app")}
       onGetStarted={() => navigateTo("/signup")}
-      onQuickStart={() => navigateTo("/signup")}
     />
   );
 }

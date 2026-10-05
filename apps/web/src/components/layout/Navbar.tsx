@@ -1,55 +1,64 @@
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+
+import { Icon } from "@/components/landing/Icon";
+import { GITHUB_URL, scrollToSection } from "@/components/landing/links";
 
 interface NavbarProps {
-  onSignIn?: () => void;
-  onGetStarted?: () => void;
+  onOpenApp?: () => void;
 }
 
-export function Navbar({ onSignIn, onGetStarted }: NavbarProps) {
+const SECTIONS = [
+  { id: "demo", label: "Product" },
+  { id: "wire", label: "How it works" },
+  { id: "features", label: "Features" },
+  { id: "status", label: "Status" },
+];
+
+export function Navbar({ onOpenApp }: NavbarProps) {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <header className="fixed inset-x-0 top-0 z-50 bg-paper/70 backdrop-blur-md">
-      <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between gap-4 px-5">
+    <header className={scrolled ? "nav is-scrolled" : "nav"}>
+      <div className="wrap nav__in">
         <a
-          href="/"
-          className="group inline-flex items-center gap-2 text-ink"
+          className="logo"
+          href="#/"
           aria-label="Huddle home"
+          onClick={(e) => {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
         >
-          <span
-            aria-hidden
-            className="flex size-6 items-center justify-center rounded-[6px] bg-ink transition-colors group-hover:bg-brand-800"
-          >
-            <span className="grid grid-cols-2 gap-0.5">
-              <span className="size-1 rounded-[1px] bg-paper" />
-              <span className="size-1 rounded-[1px] bg-paper" />
-              <span className="size-1 rounded-[1px] bg-paper" />
-              <span className="size-1 rounded-[1px] bg-paper" />
-            </span>
-          </span>
-          <span className="text-[15px] font-semibold tracking-tight">
-            Huddle
-          </span>
+          <span className="logo__mark" aria-hidden />
+          huddle
         </a>
-
-        <nav className="hidden items-center gap-6 text-sm text-text-subtle md:flex">
-          <a href="#preview" className="transition-colors hover:text-ink">
-            Product
-          </a>
-          <a href="#how-it-works" className="transition-colors hover:text-ink">
-            How it works
-          </a>
+        <nav className="nav__links">
+          {SECTIONS.map((s) => (
+            <a key={s.id} href={`#${s.id}`} onClick={scrollToSection(s.id)}>
+              {s.label}
+            </a>
+          ))}
+          <a href={`${GITHUB_URL}#readme`}>Docs</a>
         </nav>
-
-        <div className="flex shrink-0 items-center gap-0.5 sm:gap-2">
+        <div className="nav__end">
+          <a className="star" href={GITHUB_URL}>
+            <Icon name="github" />
+            Star
+          </a>
           <button
             type="button"
-            onClick={onSignIn}
-            className="px-2 py-1.5 text-sm text-text-subtle transition-colors hover:text-ink sm:px-2.5"
+            className="btn btn--primary btn--sm"
+            onClick={onOpenApp}
           >
-            Sign in
+            Open Huddle
           </button>
-          <Button variant="ink" size="sm" onClick={onGetStarted}>
-            Get started
-          </Button>
         </div>
       </div>
     </header>
