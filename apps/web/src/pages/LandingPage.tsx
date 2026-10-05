@@ -4,10 +4,11 @@ import { Closing } from "@/components/landing/Closing";
 import { Features } from "@/components/landing/Features";
 import { Footer } from "@/components/landing/Footer";
 import { Hero } from "@/components/landing/Hero";
-import { HowItWorks } from "@/components/landing/HowItWorks";
 import { LiveDemo } from "@/components/landing/LiveDemo";
-import { ShipStatus } from "@/components/landing/ShipStatus";
-import { Navbar } from "@/components/layout/Navbar";
+import { Navbar } from "@/components/landing/Navbar";
+import { Questions } from "@/components/landing/Questions";
+import { Start } from "@/components/landing/Start";
+import { Teams } from "@/components/landing/Teams";
 import "@/components/landing/landing.css";
 
 interface LandingPageProps {
@@ -61,9 +62,10 @@ export function LandingPage({ onOpenApp, onGetStarted }: LandingPageProps) {
           </p>
         </section>
 
-        <HowItWorks onGetStarted={onGetStarted} />
         <Features />
-        <ShipStatus onGetStarted={onGetStarted} />
+        <Teams />
+        <Start onGetStarted={onGetStarted} />
+        <Questions />
         <Closing onGetStarted={onGetStarted} />
       </main>
       <Footer onOpenApp={onOpenApp} />

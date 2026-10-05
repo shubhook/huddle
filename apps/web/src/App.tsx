@@ -1,22 +1,20 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-import { CreateWorkspaceModal } from "@/components/workspace/CreateWorkspaceModal";
-import { InviteLinkPanel } from "@/components/workspace/InviteLinkPanel";
-import { JoinWorkspaceScreen } from "@/components/workspace/JoinWorkspaceScreen";
 import {
+  inviteCodeFromHash,
   navigateTo,
   useHashAuthNotice,
   useHashRoute,
   useHashWorkspaceId,
 } from "@/lib/hashRoute";
 import { DashboardPage } from "@/pages/DashboardPage";
+import { JoinPage } from "@/pages/JoinPage";
 import { LandingPage } from "@/pages/LandingPage";
 import { SigninPage } from "@/pages/SigninPage";
 import { SignupPage } from "@/pages/SignupPage";
+import { WorkspaceSetupPage } from "@/pages/WorkspaceSetupPage";
 import "./index.css";
 import {
-  createInvite,
-  createWorkspace,
   type CurrentUser,
   getApiErrorMessage,
   getCurrentUser,
@@ -40,26 +38,35 @@ const GITHUB_SIGNIN_NOTICES: Record<string, string> = {
   github_failed: "GitHub sign-in failed. Please try again.",
 };
 
+/** An invite opened while signed out, resumed after sign-in. */
+const PENDING_INVITE_KEY = "huddle.pendingInvite";
+
+function takePendingInvite(): string | null {
+  try {
+    const token = sessionStorage.getItem(PENDING_INVITE_KEY);
+    sessionStorage.removeItem(PENDING_INVITE_KEY);
+    return token;
+  } catch {
+    return null;
+  }
+}
+
+/** After signing in, finish a pending invite or go where the caller wanted. */
+function continueAfterAuth(fallback: () => void) {
+  const invite = takePendingInvite();
+  if (invite) window.location.hash = `/join/${encodeURIComponent(invite)}`;
+  else fallback();
+}
+
 export function App() {
   const route = useHashRoute();
   const authNotice = useHashAuthNotice();
   const workspaceId = useHashWorkspaceId();
-  const [workspaceName, setWorkspaceName] = useState("");
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
-  const [inviteToken, setInviteToken] = useState("");
-  const [workspaceStep, setWorkspaceStep] = useState<"create" | "invite" | null>(
-    null,
-  );
   const [signinError, setSigninError] = useState<string | undefined>();
   const [signupError, setSignupError] = useState<string | undefined>();
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
-
-  const inviteUrl = useMemo(() => {
-    const origin =
-      typeof window === "undefined" ? "" : window.location.origin;
-    return `${origin}/#/join/${inviteToken}`;
-  }, [inviteToken]);
 
   useEffect(() => {
     getCurrentUser()
@@ -80,11 +87,12 @@ export function App() {
     }
   }, [route, authNotice]);
 
+  const needsSession = route === "/app" || route === "/workspace/create";
   useEffect(() => {
-    if (route === "/app" && sessionChecked && !currentUser) {
+    if (needsSession && sessionChecked && !currentUser) {
       navigateTo("/signin");
     }
-  }, [route, sessionChecked, currentUser]);
+  }, [needsSession, sessionChecked, currentUser]);
 
   // The URL carries the workspace id (#/app/<id>) so a refresh keeps it. When it
   // is missing or not one of the user's workspaces, fall back to their first
@@ -115,10 +123,6 @@ export function App() {
     };
   }, [route, currentUser, workspaceId]);
 
-  const activeWorkspace = workspaces.find(
-    (workspace) => workspace.id === workspaceId,
-  );
-
   if (route === "/signup") {
     return (
       <SignupPage
@@ -128,7 +132,7 @@ export function App() {
           try {
             await signup(values.username, values.email, values.password);
             setCurrentUser(await getCurrentUser());
-            navigateTo("/workspace/create");
+            continueAfterAuth(() => navigateTo("/workspace/create"));
           } catch (error) {
             setSignupError(
               getApiErrorMessage(
@@ -151,11 +155,9 @@ export function App() {
           try {
             await signin(values.email, values.password);
             setCurrentUser(await getCurrentUser());
-            navigateTo("/app");
+            continueAfterAuth(() => navigateTo("/app"));
           } catch (error) {
-            setSigninError(
-              getApiErrorMessage(error, "Invalid email or password"),
-            );
+            setSigninError(getApiErrorMessage(error, "Invalid email or password"));
           }
         }}
       />
@@ -163,85 +165,56 @@ export function App() {
   }
 
   if (route === "/join") {
+    if (!sessionChecked) return null;
     return (
-      <JoinWorkspaceScreen
-        onSignIn={() => navigateTo("/signin")}
-        onSubmit={async (inviteCode) => {
-          const { workspaceId: joinedWorkspaceId } =
-            await joinWorkspace(inviteCode);
+      <JoinPage
+        signedIn={currentUser !== null}
+        onSignIn={() => {
+          const token = inviteCodeFromHash();
+          try {
+            if (token) sessionStorage.setItem(PENDING_INVITE_KEY, token);
+          } catch {
+            // Storage disabled: the user can open the link again after signing in.
+          }
+          navigateTo("/signin");
+        }}
+        onJoin={async (token) => {
+          const { workspaceId: joinedWorkspaceId } = await joinWorkspace(token);
           navigateTo("/app", { workspaceId: joinedWorkspaceId });
         }}
       />
     );
   }
 
-  if (route === "/app") {
+  if (route === "/workspace/create") {
     if (!sessionChecked || !currentUser) return null;
-
     return (
-      <>
-        <DashboardPage
-          username={currentUser.username}
-          workspaceName={activeWorkspace?.name ?? ""}
-          workspaceId={workspaceId}
-          onLogout={async () => {
-            await logout();
-            setCurrentUser(null);
-            navigateTo("/signin");
-          }}
-          onWorkspaceClick={() => setWorkspaceStep("create")}
-        />
-        <CreateWorkspaceModal
-          open={workspaceStep === "create"}
-          step={1}
-          onClose={() => setWorkspaceStep(null)}
-          onContinue={async ({ workspaceName: name }) => {
-            const { workspaceId: newWorkspaceId } = await createWorkspace(name);
-            const { token } = await createInvite(newWorkspaceId);
-            setWorkspaceName(name);
-            setInviteToken(token);
-            setWorkspaceStep("invite");
-            navigateTo("/app", { workspaceId: newWorkspaceId });
-          }}
-        />
-        {workspaceStep === "invite" && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-950/20 p-4 backdrop-blur-[2px]">
-            <InviteLinkPanel
-              workspaceName={workspaceName}
-              inviteUrl={inviteUrl}
-              onContinue={() => setWorkspaceStep(null)}
-            />
-          </div>
-        )}
-      </>
+      <WorkspaceSetupPage
+        onDone={(newWorkspaceId) => navigateTo("/app", { workspaceId: newWorkspaceId })}
+      />
     );
   }
 
-  if (route === "/workspace/create") {
+  if (route === "/app") {
+    if (!sessionChecked || !currentUser || !workspaceId) return null;
+
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        {workspaceStep === "invite" ? (
-          <InviteLinkPanel
-            workspaceName={workspaceName}
-            inviteUrl={inviteUrl}
-            onContinue={() => navigateTo("/app")}
-          />
-        ) : (
-          <CreateWorkspaceModal
-            open
-            step={1}
-            onContinue={async ({ workspaceName: name }) => {
-              const { workspaceId: newWorkspaceId } =
-                await createWorkspace(name);
-              const { token } = await createInvite(newWorkspaceId);
-              setWorkspaceName(name);
-              setInviteToken(token);
-              setWorkspaceStep("invite");
-              navigateTo("/app", { workspaceId: newWorkspaceId });
-            }}
-          />
-        )}
-      </div>
+      <DashboardPage
+        key={currentUser.id}
+        user={currentUser}
+        workspaces={workspaces}
+        workspaceId={workspaceId}
+        onSelectWorkspace={(id) => navigateTo("/app", { workspaceId: id })}
+        onCreateWorkspace={() => navigateTo("/workspace/create")}
+        onLogout={async () => {
+          try {
+            await logout();
+          } finally {
+            setCurrentUser(null);
+            navigateTo("/signin");
+          }
+        }}
+      />
     );
   }
 

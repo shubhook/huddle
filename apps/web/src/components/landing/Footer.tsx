@@ -12,12 +12,14 @@ export function Footer({ onOpenApp }: FooterProps) {
           <span className="logo__mark" aria-hidden />
           huddle
         </span>
-        <span>© 2026 · Built to learn WebSockets</span>
+        <span>© 2026</span>
         <nav className="foot__links">
           <a href={GITHUB_URL}>GitHub</a>
-          <a href={`${GITHUB_URL}#readme`}>Docs</a>
-          <a href="#status" onClick={scrollToSection("status")}>
-            Status
+          <a href="#features" onClick={scrollToSection("features")}>
+            Features
+          </a>
+          <a href="#questions" onClick={scrollToSection("questions")}>
+            Questions
           </a>
           <a
             href="#/app"

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { Icon } from "@/components/landing/Icon";
+import { Icon } from "@/components/ui/Icon";
 import { GITHUB_URL, scrollToSection } from "@/components/landing/links";
 
 interface NavbarProps {
@@ -9,9 +9,10 @@ interface NavbarProps {
 
 const SECTIONS = [
   { id: "demo", label: "Product" },
-  { id: "wire", label: "How it works" },
   { id: "features", label: "Features" },
-  { id: "status", label: "Status" },
+  { id: "for", label: "Teams" },
+  { id: "start", label: "Start" },
+  { id: "questions", label: "Questions" },
 ];
 
 export function Navbar({ onOpenApp }: NavbarProps) {
@@ -45,7 +46,6 @@ export function Navbar({ onOpenApp }: NavbarProps) {
               {s.label}
             </a>
           ))}
-          <a href={`${GITHUB_URL}#readme`}>Docs</a>
         </nav>
         <div className="nav__end">
           <a className="star" href={GITHUB_URL}>
