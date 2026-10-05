@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { Icon } from "@/components/landing/Icon";
+import { Icon } from "@/components/ui/Icon";
 import { GITHUB_URL } from "@/components/landing/links";
 
 const INSTALL_CMD = "bun install && bun run dev";

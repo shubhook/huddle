@@ -1,0 +1,193 @@
+/* Account screens, ported from design/flows.css. */
+
+.flow {
+  min-height: 100vh;
+  background: var(--page);
+  color: var(--body);
+
+  .flow__top {
+    display: flex;
+    align-items: center;
+    height: 68px;
+    padding: 0 28px;
+  }
+
+  .sheet {
+    width: min(380px, calc(100% - 40px));
+    margin: 8vh auto 80px;
+  }
+
+  .sheet h1 {
+    margin: 28px 0 0;
+    font-size: 30px;
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    color: var(--ink);
+  }
+
+  .lede {
+    margin: 10px 0 0;
+    font-size: 15.5px;
+    line-height: 1.5;
+    color: var(--muted-2);
+  }
+
+  .lede b {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .sheet form {
+    margin-top: 22px;
+  }
+
+  .gh {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: 44px;
+    margin-top: 22px;
+    border-radius: 12px;
+    border: 1px solid var(--line-2);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 14.5px;
+    font-weight: 500;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .gh:hover {
+    border-color: #ddd;
+  }
+
+  .or {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 18px 0 0;
+    color: var(--muted);
+    font-size: 12.5px;
+  }
+
+  .or::before,
+  .or::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  .f {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--muted-2);
+  }
+
+  .f input {
+    height: 44px;
+    padding: 0 12px;
+    border-radius: 12px;
+    border: 1px solid var(--line-2);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 15px;
+    outline: none;
+  }
+
+  .f input:focus {
+    border-color: #b9cff8;
+    box-shadow: 0 0 0 4px #2563eb14;
+  }
+
+  .f small {
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+
+  .error {
+    margin: 14px 0 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #f5c2c4;
+    background: #fff5f5;
+    font-size: 13.5px;
+    line-height: 1.45;
+    color: #b3261e;
+  }
+
+  .sheet .btn {
+    width: 100%;
+    margin-top: 18px;
+  }
+
+  .fine {
+    margin: 18px 0 0;
+    text-align: center;
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  .fine button {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font-size: inherit;
+    font-weight: 500;
+  }
+
+  .fine button:hover {
+    color: var(--blue);
+  }
+
+  .invite-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 48px;
+    margin-top: 22px;
+    padding: 0 6px 0 14px;
+    border-radius: 12px;
+    border: 1px solid var(--line-2);
+    background: var(--surface-soft);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink);
+  }
+
+  .invite-box span {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .invite-box button {
+    height: 34px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 9px;
+    background: var(--ink);
+    color: #fff;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .invite-box button:disabled {
+    opacity: 0.5;
+  }
+
+  .note {
+    margin-top: 10px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+}
