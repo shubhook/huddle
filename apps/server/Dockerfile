@@ -16,4 +16,4 @@ RUN bunx prisma generate
 
 EXPOSE 3000
 
-CMD ["bun", "run", "src/index.ts"]
+CMD ["sh", "-c", "bunx prisma migrate deploy && exec bun run src/index.ts"]
