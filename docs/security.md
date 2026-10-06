@@ -43,7 +43,7 @@ Set in `apps/server/src/utils/security-headers.ts` on every HTTP response:
 - `Strict-Transport-Security` when `COOKIE_SECURE=true`
 - `X-Powered-By` is off
 
-The web dev server sets none of these. Put a proxy in front of it when you deploy.
+The web dev server sets none of these. Vercel sets `nosniff`, `X-Frame-Options: DENY`, and `Referrer-Policy: no-referrer` from `vercel.json`. It does not set CSP or HSTS on the static files. The API still sets the full list above.
 
 ## GitHub
 

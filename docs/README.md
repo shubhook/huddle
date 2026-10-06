@@ -5,6 +5,7 @@ How Huddle is put together, and how to run it. The root [README](../README.md) i
 | Page | What it covers |
 | --- | --- |
 | [Setup](./setup.md) | Clone, env, Postgres, migrations, Compose, smoke check |
+| [Deploy](./deploy.md) | Vercel web, Coolify API, Supabase Postgres. What is live |
 | [Architecture](./architecture.md) | How the API, socket, web, and Postgres fit |
 | [Auth and sessions](./auth.md) | Cookies, JWT + Session rows, GitHub OAuth, logout |
 | [Workspaces and channels](./workspaces.md) | Membership, invites, channels, who can do what |

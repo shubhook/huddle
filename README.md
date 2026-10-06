@@ -6,6 +6,8 @@ I built this to learn WebSockets. The rest of the app exists so that socket has 
 
 ![Huddle landing and live chat demo](./docs/readme-hero.png)
 
+Live: [chatonhuddle.vercel.app](https://chatonhuddle.vercel.app). Web on Vercel, API on Coolify, Postgres on Supabase. How that is wired: [deploy](./docs/deploy.md).
+
 ## Features
 
 - Email and password accounts, optional GitHub OAuth
@@ -58,6 +60,7 @@ docs/         setup and how each piece works
 ## Documentation
 
 - [Setup](./docs/setup.md)
+- [Deploy](./docs/deploy.md)
 - [Architecture](./docs/architecture.md)
 - [Auth and sessions](./docs/auth.md)
 - [Workspaces and channels](./docs/workspaces.md)

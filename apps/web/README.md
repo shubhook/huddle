@@ -2,7 +2,7 @@
 
 React client for Huddle. Hash-routed UI on Bun. Talks to the API over HTTP and WebSocket.
 
-How it works: [web client](../../docs/web.md). How to run the whole app: [setup](../../docs/setup.md).
+How it works: [web client](../../docs/web.md). How to run the whole app: [setup](../../docs/setup.md). Production is [deploy](../../docs/deploy.md).
 
 ## Run
 

@@ -12,6 +12,8 @@ web SPA  :3008
   hash router, no backend of its own
 ```
 
+Production keeps that split. Vercel serves the SPA. Coolify runs the API image. Postgres is Supabase. Details in [deploy](./deploy.md).
+
 History is REST. Live messages are WebSocket. Both write through `sendChannelMessage` in `apps/server/src/services/message.service.ts`, so a REST send still reaches live sockets.
 
 ## Why it looks like this
@@ -57,4 +59,4 @@ Prisma schema lives in `apps/server/prisma/schema.prisma`. The important tables:
 
 ## What this is not
 
-Huddle is not a self-host product with an installer. You run source or the Compose API image on a machine you already have. There is no presence, no search, and no DM UI.
+Huddle is not a self-host product with an installer. The live instance is Vercel plus Coolify plus Supabase, documented in [deploy](./deploy.md). There is no presence, no search, and no DM UI.

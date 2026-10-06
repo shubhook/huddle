@@ -27,6 +27,8 @@ Use `localhost` or `127.0.0.1` the same way the API's `CLIENT_ORIGIN` is set. Th
 
 Bun inlines `BUN_PUBLIC_*` at bundle time. Unset variables are not inlined, so the client reads them behind try/catch (`apps/web/src/lib/api.ts`, `ws.ts`). A bare `process.env.BUN_PUBLIC_WS_URL` in the browser throws and takes the dashboard down.
 
+The production build must pass `env: "BUN_PUBLIC_*"` to `Bun.build`. Without it the Vercel bundle falls back to `http://localhost:3000`. Vercel env is therefore a build-time setting. Change the API host, then rebuild. See [deploy](./deploy.md).
+
 | Variable | Default |
 | --- | --- |
 | `BUN_PUBLIC_API_URL` | `http://localhost:3000` |

@@ -133,6 +133,10 @@ docker compose up --build -d api
 
 Tokens issued before the Session table existed have no `sid` and are rejected. Everyone signs in once after that upgrade.
 
+## Production
+
+Local Compose is not what is live. Web is Vercel, the API is Coolify, Postgres is Supabase. [Deploy](./deploy.md).
+
 ## Troubleshooting
 
 | Symptom | Likely cause |

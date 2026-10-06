@@ -2,7 +2,7 @@
 
 HTTP API and WebSocket for Huddle. History is REST. Live messages are WebSocket. Same port, same `jwt_token` cookie.
 
-How it works: [docs](../../docs/README.md). How to run it: [setup](../../docs/setup.md).
+How it works: [docs](../../docs/README.md). How to run it: [setup](../../docs/setup.md). Production is [deploy](../../docs/deploy.md).
 
 ## Run
 
