@@ -1,27 +1,15 @@
 # `@huddle/web`
 
-React client for Huddle.
+React client for Huddle. Hash-routed UI on Bun. Talks to the API over HTTP and WebSocket.
 
-> Hash-routed UI on Bun. Talks to the API over HTTP and WebSocket.
-
-## Stack
-
-| Piece | Choice |
-| --- | --- |
-| Runtime | Bun |
-| UI | React 19 |
-| Styling | Tailwind v4 |
-| Routing | `window.location.hash` |
-| HTTP | axios (`withCredentials`) |
-| Realtime | browser `WebSocket` via `src/lib/ws.ts` |
+How it works: [web client](../../docs/web.md). How to run the whole app: [setup](../../docs/setup.md).
 
 ## Run
 
-From this directory (or via root `bun run dev:web`):
+From repo root (`bun run dev:web`) or this directory:
 
 ```bash
 cp .env.example .env   # optional
-bun install
 bun --hot src/index.ts
 ```
 
@@ -30,14 +18,12 @@ bun --hot src/index.ts
 | Web | `http://localhost:3008` |
 | API it expects | `http://localhost:3000` |
 
-### Env
+Cookies are set by the API host. Open the UI with the same hostname you put in `CLIENT_ORIGIN` / `BUN_PUBLIC_API_URL` (`localhost` vs `127.0.0.1`).
 
 | Variable | Purpose |
 | --- | --- |
-| `BUN_PUBLIC_API_URL` | API origin. Defaults to `http://localhost:3000`. |
-| `BUN_PUBLIC_WS_URL` | Optional. Otherwise `http`→`ws` on the API URL. |
-
-Cookies are set by the API host. Open the UI with the same hostname you put in `CLIENT_ORIGIN` / `BUN_PUBLIC_API_URL` (`localhost` vs `127.0.0.1`).
+| `BUN_PUBLIC_API_URL` | API origin, default `http://localhost:3000` |
+| `BUN_PUBLIC_WS_URL` | Optional. Otherwise `http` → `ws` on the API URL |
 
 ## Screens
 
@@ -46,30 +32,9 @@ Cookies are set by the API host. Open the UI with the same hostname you put in `
 | `#/` | Landing |
 | `#/signin` | Sign in |
 | `#/signup` | Sign up |
-| `#/join` | Join workspace by invite |
-| `#/workspace/create` | Create workspace + invite step |
-| `#/app` | Dashboard (channels + live chat) |
-
-## Chat wiring
-
-| Step | Where |
-| --- | --- |
-| Load channels | `GET /workspaces/:id` |
-| Load history | `GET /channels/:id/messages` |
-| Open socket | `connectSocket()` in `src/lib/ws.ts` |
-| Join room | `join_channel` when status is `connected` |
-| Send | `send_message` over the socket |
-
-Connection status shows in `ConnectionBadge`. The composer does not yet disable itself when the socket is down.
-
-## Known gaps
-
-| Gap | Effect |
-| --- | --- |
-| `workspaceId` is React state only | Refresh on `#/app` loses the workspace and never reconnects the socket |
-| No default channel on create | New workspace can have an empty sidebar |
-| No reconnect | Close leaves status `disconnected` until remount |
-| Dead chrome | Search, info, formatting toolbar, and some landing CTAs do nothing yet |
+| `#/join/<token>` | Join workspace |
+| `#/workspace/create` | Create workspace |
+| `#/app/<workspaceId>` | Dashboard |
 
 ## Scripts
 

@@ -1,0 +1,60 @@
+# Architecture
+
+Two processes, one database, an optional Redis.
+
+```text
+browser
+  HTTP  (axios, cookie jwt_token)  -->  Express API  :3000  -->  Postgres
+  WebSocket (same cookie, same port) --^
+                                           |
+                                           +--> Redis pub/sub  (optional)
+web SPA  :3008
+  hash router, no backend of its own
+```
+
+History is REST. Live messages are WebSocket. Both write through `sendChannelMessage` in `apps/server/src/services/message.service.ts`, so a REST send still reaches live sockets.
+
+## Why it looks like this
+
+The API and the web app are different origins (`:3000` and `:3008`). The login cookie is `httpOnly`, so the SPA never reads it. Credentialed axios and the WebSocket upgrade both attach it because they talk to the API host.
+
+Hash routing (`#/app/<workspaceId>`) keeps the web server a static file host. Bun serves `index.html` for every path.
+
+Redis is not required for a single API process. Set `REDIS_URL` when you run more than one, or when you want rate-limit counters shared. If Redis is down, the API keeps working inside that process.
+
+## Packages
+
+| Path | Job |
+| --- | --- |
+| `apps/server` | Express routes, Prisma, `ws` upgrade, Redis bus |
+| `apps/web` | React UI, axios, browser WebSocket |
+
+There is no shared package. Types are duplicated where the client needs them.
+
+## Request path (signed-in chat)
+
+1. `POST /auth/signin` sets `jwt_token` and a `Session` row.
+2. The SPA goes to `#/app`, then `GET /workspaces` and `GET /workspaces/:id`.
+3. `connectSocket()` opens `ws://localhost:3000`. The upgrade checks Origin, then the cookie, then the Session row.
+4. The client sends `join_channel`, then `GET /channels/:id/messages`. Join first, so nothing sent after the join is missed. Live and fetched messages are merged by id.
+5. A send is `send_message` with a `clientMessageId`. The server saves the row, publishes on the bus, and replies `send_message_ack`.
+
+Details: [auth](./auth.md), [workspaces](./workspaces.md), [realtime](./realtime.md), [web](./web.md).
+
+## Data
+
+Prisma schema lives in `apps/server/prisma/schema.prisma`. The important tables:
+
+| Model | Role |
+| --- | --- |
+| `User` | Email / username / optional password / optional `githubId` |
+| `Session` | One row per login. The JWT carries its id as `sid` |
+| `Workspace` / `WorkspaceMember` | Membership and role (`owner` or `member`) |
+| `Channel` / `ChannelMember` | A channel and who is in it |
+| `Message` | Channel history |
+| `WorkspaceInvites` | Token, expiry, who created it |
+| `DirectMessage` | REST only. The socket does not carry these |
+
+## What this is not
+
+Huddle is not a self-host product with an installer. You run source or the Compose API image on a machine you already have. There is no presence, no search, and no DM UI.
