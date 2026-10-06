@@ -4,6 +4,8 @@ Live team chat. You join a workspace, open a channel, and messages show up as th
 
 I built this to learn WebSockets. The rest of the app exists so that socket has somewhere real to live.
 
+![Huddle landing and live chat demo](./docs/readme-hero.png)
+
 ## Features
 
 - Email and password accounts, optional GitHub OAuth
