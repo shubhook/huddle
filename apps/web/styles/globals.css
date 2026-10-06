@@ -196,24 +196,8 @@ a {
 }
 
 .logo__mark {
-  position: relative;
-  width: 24px;
-  height: 24px;
-  border-radius: 8px;
-  background: linear-gradient(var(--blue-top), var(--blue-bottom));
-  box-shadow: var(--shadow-blue), inset 0 1px 0 #ffffff40;
+  display: block;
+  flex: none;
+  width: 28px;
+  height: 28px;
 }
-
-.logo__mark::before,
-.logo__mark::after {
-  content: "";
-  position: absolute;
-  left: 6px;
-  right: 6px;
-  height: 2.5px;
-  border-radius: 2px;
-  background: #fff;
-}
-
-.logo__mark::before { top: 8px; }
-.logo__mark::after { top: 13.5px; right: 10px; opacity: 0.75; }

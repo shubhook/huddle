@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { LogoMark } from "@/components/ui/LogoMark";
 import { Icon } from "@/components/ui/Icon";
 import { GITHUB_URL, scrollToSection } from "@/components/landing/links";
 
@@ -37,7 +38,7 @@ export function Navbar({ onOpenApp }: NavbarProps) {
             window.scrollTo({ top: 0, behavior: "smooth" });
           }}
         >
-          <span className="logo__mark" aria-hidden />
+          <LogoMark />
           huddle
         </a>
         <nav className="nav__links">

@@ -1,3 +1,4 @@
+import { LogoMark } from "@/components/ui/LogoMark";
 import { GITHUB_URL, scrollToSection } from "@/components/landing/links";
 
 interface FooterProps {
@@ -9,7 +10,7 @@ export function Footer({ onOpenApp }: FooterProps) {
     <footer className="foot">
       <div className="wrap foot__in">
         <span className="logo">
-          <span className="logo__mark" aria-hidden />
+          <LogoMark />
           huddle
         </span>
         <span>© 2026</span>

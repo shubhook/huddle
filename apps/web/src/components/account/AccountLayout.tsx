@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { LogoMark } from "@/components/ui/LogoMark";
 import { Icon } from "@/components/ui/Icon";
 import { startGithubLogin } from "@/lib/api";
 import "@/components/account/account.css";
@@ -16,7 +17,7 @@ export function AccountLayout({ title, lede, children }: AccountLayoutProps) {
     <div className="flow">
       <header className="flow__top">
         <a className="logo" href="#/" aria-label="Huddle home">
-          <span className="logo__mark" aria-hidden />
+          <LogoMark />
           huddle
         </a>
       </header>
