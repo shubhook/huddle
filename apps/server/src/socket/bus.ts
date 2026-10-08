@@ -1,4 +1,5 @@
 import { createClient } from "redis";
+import type { ServerFrame } from "@huddle/protocol";
 import { env } from "../utils/env";
 
 /**
@@ -8,7 +9,7 @@ import { env } from "../utils/env";
  * process only.
  */
 export type BusEvent =
-    | { kind: "channel_frame"; channelId: string; frame: unknown }
+    | { kind: "channel_frame"; channelId: string; frame: ServerFrame }
     | { kind: "revoke_sessions"; sessionIds: string[] }
     | { kind: "channel_deleted"; channelId: string; userIds: string[] }
     /** These users became members of these channels. Their open sockets subscribe to them. */
@@ -130,4 +131,40 @@ export async function startBus(): Promise<void> {
     } catch (err) {
         warn("Redis startup failed, staying in single-process mode", err);
     }
+}
+
+/** What the tests assert about, so a shared module cache cannot fake the redis-down path. */
+export function busSnapshotForTests(): { configured: boolean; healthy: boolean; hasClient: boolean } {
+    return {
+        configured: Boolean(env.redisUrl),
+        healthy: redisIsHealthy(),
+        hasClient: publisher !== null,
+    };
+}
+
+/** Drops the redis clients so a process (and the tests) can shut down. */
+export async function stopBus(): Promise<void> {
+    subscribed = false;
+    const clients = [...new Set([publisher, subscriber].filter((client) => client !== null))];
+    publisher = null;
+    subscriber = null;
+    for (const client of clients) {
+        try {
+            client.destroy();
+        } catch {
+            // already closed
+        }
+    }
+}
+
+/**
+ * Points publish at a stand-in client. Tests use it to force the branch where
+ * redis accepted the connection and then a publish throws.
+ */
+export function useBusPublisherForTests(
+    client: { isReady: boolean; publish: (topic: string, message: string) => Promise<number> } | null,
+): void {
+    publisher = client as RedisClient | null;
+    subscriber = publisher;
+    subscribed = Boolean(client?.isReady);
 }

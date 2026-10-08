@@ -1,9 +1,9 @@
+import { MAX_MESSAGE_LENGTH } from "@huddle/protocol";
 import { useLayoutEffect, useRef, useState, type Ref } from "react";
 
 import { Icon } from "@/components/ui/Icon";
 
-/** Matches the server's limit. */
-export const MAX_MESSAGE_LENGTH = 4000;
+export { MAX_MESSAGE_LENGTH };
 
 interface ComposerProps {
   channelName: string;

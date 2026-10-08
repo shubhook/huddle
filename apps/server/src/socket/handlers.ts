@@ -1,5 +1,5 @@
 import { WebSocket } from "ws";
-import type { ClientFrame } from "./schema";
+import type { ClientFrame } from "@huddle/protocol";
 import type { AuthenticatedWebSocket } from "./types";
 import { assertChannelAccess, ChannelAccessError } from "../services/channel-access";
 import { MessageRateLimitError, sendChannelMessage } from "../services/message.service";

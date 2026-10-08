@@ -12,6 +12,3 @@ export interface AuthenticatedWebSocket extends WebSocket {
     pending: number;
     expiryTimer?: ReturnType<typeof setTimeout>;
 }
-
-/** Close code the client treats as "your session is gone, do not reconnect". */
-export const CLOSE_SESSION_ENDED = 4401;

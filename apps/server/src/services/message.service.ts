@@ -1,3 +1,4 @@
+import type { ServerFrame } from "@huddle/protocol";
 import { prisma } from "../db";
 import { publishEvent } from "../socket/bus";
 import { consumeLimit, type LimitWindow } from "../utils/rate-limit";
@@ -100,10 +101,24 @@ export async function sendChannelMessage(input: {
 
     const event = toEvent(saved);
 
+    const frame: ServerFrame = {
+        type: "new_message",
+        payload: {
+            id: event.id,
+            channelId: event.channelId,
+            senderId: event.senderId,
+            senderUsername: event.senderUsername,
+            senderAvatarId: event.senderAvatarId,
+            content: event.content,
+            clientMessageId: event.clientMessageId,
+            createdAt: event.createdAt.toISOString(),
+        },
+    };
+
     await publishEvent({
         kind: "channel_frame",
         channelId: event.channelId,
-        frame: { type: "new_message", payload: event },
+        frame,
     });
 
     return event;
