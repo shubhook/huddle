@@ -100,3 +100,18 @@ export function subscribedPairs(): { userId: string; channelId: string }[] {
     }
     return [...pairs.values()];
 }
+
+/**
+ * A deleted channel: drop its room and tell every member's sockets, joined to it or not,
+ * so their channel lists update.
+ */
+export function deliverChannelDeleted(channelId: string, userIds: string[]) {
+    channelSubscriptions.delete(channelId);
+
+    const members = new Set(userIds);
+    for (const ws of connections) {
+        if (members.has(ws.userId)) {
+            sendFrame(ws, { type: "channel_deleted", channelId });
+        }
+    }
+}

@@ -16,12 +16,15 @@ export function Composer({ channelName, onSend, textareaRef }: ComposerProps) {
   const [draft, setDraft] = useState("");
   const boxRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Grow with the text, up to the CSS max-height.
+  // Grow with the text, up to the CSS max-height. Only allow scrolling once the
+  // text is past that: scrollHeight is rounded, so a single line can overflow
+  // by a fraction of a pixel and show a scrollbar.
   useLayoutEffect(() => {
     const input = boxRef.current;
     if (!input) return;
     input.style.height = "auto";
     input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
+    input.style.overflowY = input.scrollHeight > 120 ? "auto" : "hidden";
   }, [draft]);
 
   const submit = () => {

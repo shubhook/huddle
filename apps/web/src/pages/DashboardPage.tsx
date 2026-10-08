@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { ChannelDetails } from "@/components/app/ChannelDetails";
 import { ChannelHeader } from "@/components/app/ChannelHeader";
 import {
   ChannelSidebar,
@@ -8,7 +9,7 @@ import {
 } from "@/components/app/ChannelSidebar";
 import { ChatLayout } from "@/components/app/ChatLayout";
 import { Composer, MAX_MESSAGE_LENGTH } from "@/components/app/Composer";
-import { InviteDialog, NewChannelDialog } from "@/components/app/Dialogs";
+import { DeleteChannelDialog, InviteDialog, NewChannelDialog } from "@/components/app/Dialogs";
 import { EmptyChannel } from "@/components/app/EmptyChannel";
 import { MessageFeed, MessageSkeleton, type FeedItem } from "@/components/app/MessageFeed";
 import { ProfileView } from "@/components/app/ProfileView";
@@ -17,10 +18,13 @@ import { WorkspaceRail } from "@/components/app/WorkspaceRail";
 import { Icon } from "@/components/ui/Icon";
 import {
   avatarUrl,
+  type ChannelDetails as ChannelDetailsData,
   createChannel,
   createInvite,
   type CurrentUser,
+  deleteChannel,
   getApiErrorMessage,
+  getChannelDetails,
   getMessages,
   getWorkspace,
   removeAvatar,
@@ -119,6 +123,11 @@ export function DashboardPage({
   const [dialog, setDialog] = useState<"channel" | "invite" | null>(null);
   const [dialogError, setDialogError] = useState<string>();
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  /** The channel the delete confirmation is asking about. */
+  const [deleteTarget, setDeleteTarget] = useState<Channel | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [details, setDetails] = useState<ChannelDetailsData | null>(null);
+  const [detailsError, setDetailsError] = useState<string>();
   const composerRef = useRef<HTMLTextAreaElement>(null);
   // clientMessageId -> timer that fires if the server never acks that send.
   const ackTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
@@ -130,6 +139,11 @@ export function DashboardPage({
   const knownSenders = useRef(new Set<string>());
   // The channel on screen right now, read by the long-lived socket listener.
   const viewingRef = useRef<string | null>(null);
+  // Read by the socket listener to name a channel someone else deleted.
+  const channelsRef = useRef(channels);
+  channelsRef.current = channels;
+  // Channels this tab is deleting. Their channel_deleted frame needs no notice.
+  const deletingIds = useRef(new Set<string>());
 
   useEffect(() => {
     if (!notice) return;
@@ -163,6 +177,23 @@ export function DashboardPage({
     } catch {
       setNotice("Could not load message history.");
     }
+  }, []);
+
+  /** Forgets a deleted channel and everything loaded for it. */
+  const dropChannel = useCallback((channelId: string) => {
+    const without = <T,>(current: ReadonlySet<T>, value: T) => {
+      if (!current.has(value)) return current;
+      const next = new Set(current);
+      next.delete(value);
+      return next;
+    };
+    setChannels((current) => current.filter((channel) => channel.id !== channelId));
+    setMessages((current) => current.filter((message) => message.channel !== channelId));
+    setPending((current) => current.filter((send) => send.channelId !== channelId));
+    setLoadedChannels((current) => without(current, channelId));
+    setUnread((current) => without(current, channelId));
+    setActiveChannelId((current) => (current === channelId ? null : current));
+    setDeleteTarget((current) => (current?.id === channelId ? null : current));
   }, []);
 
   // A new workspace starts from what this browser last saw of it, or from a
@@ -318,6 +349,17 @@ export function DashboardPage({
           break;
         }
 
+        case "channel_deleted": {
+          const channelId = message.channelId;
+          const deleted = channelsRef.current.find((channel) => channel.id === channelId);
+          if (deleted && !deletingIds.current.has(channelId)) {
+            setNotice(`#${deleted.name} was deleted.`);
+          }
+          deletingIds.current.delete(channelId);
+          dropChannel(channelId);
+          break;
+        }
+
         case "removed_from_channel":
           setChannels((current) =>
             current.filter((channel) => channel.id !== message.channelId),
@@ -342,7 +384,7 @@ export function DashboardPage({
           break;
       }
     });
-  }, [loadHistory, user.username, workspaceId]);
+  }, [loadHistory, dropChannel, user.username, workspaceId]);
 
   const activeChannel = useMemo(
     () => channels.find((channel) => channel.id === activeChannelId) ?? channels[0],
@@ -369,6 +411,33 @@ export function DashboardPage({
       leaveChannel(activeChannel.id);
     };
   }, [activeChannel?.id, workspaceId, status]);
+
+  // A channel still being created has no details to fetch, and nothing to delete.
+  const detailsChannelId =
+    detailsOpen && view === "chat" && activeChannel && !isPendingChannel(activeChannel.id)
+      ? activeChannel.id
+      : undefined;
+
+  useEffect(() => {
+    if (!detailsChannelId) return;
+    let cancelled = false;
+
+    setDetails(null);
+    setDetailsError(undefined);
+    getChannelDetails(detailsChannelId)
+      .then((loaded) => {
+        if (!cancelled) setDetails(loaded);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setDetailsError(getApiErrorMessage(error, "Could not load channel details."));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [detailsChannelId]);
 
   const sidebarChannels: SidebarChannel[] = useMemo(
     () =>
@@ -536,6 +605,22 @@ export function DashboardPage({
     return true;
   }
 
+  async function handleDeleteChannel(): Promise<boolean> {
+    if (!deleteTarget) return false;
+    const channelId = deleteTarget.id;
+    // The socket frame can land before the response, so mark it first.
+    deletingIds.current.add(channelId);
+    try {
+      await deleteChannel(channelId);
+      dropChannel(channelId);
+      return true;
+    } catch (error) {
+      deletingIds.current.delete(channelId);
+      setDialogError(getApiErrorMessage(error, "Could not delete channel."));
+      return false;
+    }
+  }
+
   function openDialog(next: "channel" | "invite") {
     setDialogError(undefined);
     setDrawerOpen(false);
@@ -564,13 +649,20 @@ export function DashboardPage({
         : "Connecting…"
       : "Offline";
   const role = workspaces.find((workspace) => workspace.id === workspaceId)?.role;
+  // Admins manage channels; invites stay with owners. Both mirror the server.
+  const canManageChannels = role === "owner" || role === "admin";
+  const onInvite = role === "owner" ? () => openDialog("invite") : undefined;
+  const onNewChannel = canManageChannels ? () => openDialog("channel") : undefined;
   const channelName = activeChannel?.name ?? "";
 
   return (
     <ChatLayout
       theme={theme}
       drawerOpen={drawerOpen}
-      onCloseDrawer={() => setDrawerOpen(false)}
+      onCloseDrawer={() => {
+        setDrawerOpen(false);
+        setDetailsOpen(false);
+      }}
       rail={
         <WorkspaceRail
           workspaces={workspaces}
@@ -603,16 +695,41 @@ export function DashboardPage({
             setView("chat");
             setDrawerOpen(false);
           }}
-          onInvite={() => openDialog("invite")}
-          onNewChannel={() => openDialog("channel")}
+          onInvite={onInvite}
+          onNewChannel={onNewChannel}
           onProfile={() => {
             setView("profile");
             setDrawerOpen(false);
           }}
         />
       }
+      details={
+        detailsChannelId && (
+          <ChannelDetails
+            channelName={channelName}
+            details={details?.id === detailsChannelId ? details : null}
+            error={detailsError}
+            userId={user.id}
+            myAvatarUrl={myAvatarUrl}
+            canDelete={canManageChannels}
+            onDelete={() => {
+              if (!activeChannel) return;
+              setDialogError(undefined);
+              setDeleteTarget(activeChannel);
+            }}
+            onClose={() => setDetailsOpen(false)}
+          />
+        )
+      }
       overlay={
-        dialog === "channel" ? (
+        deleteTarget ? (
+          <DeleteChannelDialog
+            channelName={deleteTarget.name}
+            error={dialogError}
+            onConfirm={handleDeleteChannel}
+            onClose={() => setDeleteTarget(null)}
+          />
+        ) : dialog === "channel" ? (
           <NewChannelDialog
             workspaceName={workspaceName}
             error={dialogError}
@@ -652,12 +769,26 @@ export function DashboardPage({
             title={channelName}
             onMenu={() => setDrawerOpen(true)}
             actions={
-              memberCount !== null && (
-                <span className="faces faces--plain" title="Members in this workspace">
-                  <Icon name="users" />
-                  {memberCount}
-                </span>
-              )
+              <>
+                {memberCount !== null && (
+                  <span className="faces faces--plain" title="Members in this workspace">
+                    <Icon name="users" />
+                    {memberCount}
+                  </span>
+                )}
+                {activeChannel && (
+                  <button
+                    type="button"
+                    className={detailsOpen ? "icon-btn is-on" : "icon-btn"}
+                    title="Channel details"
+                    aria-label="Channel details"
+                    aria-pressed={detailsOpen}
+                    onClick={() => setDetailsOpen((current) => !current)}
+                  >
+                    <Icon name="info" />
+                  </button>
+                )}
+              </>
             }
           />
 
@@ -681,9 +812,9 @@ export function DashboardPage({
                 activeChannel ? (
                   <EmptyChannel
                     channelName={channelName}
-                    onInvite={() => openDialog("invite")}
+                    onInvite={onInvite}
                     onSayHello={() => composerRef.current?.focus()}
-                    onNewChannel={() => openDialog("channel")}
+                    onNewChannel={onNewChannel}
                   />
                 ) : (
                   <p className="loading">No channels yet.</p>
