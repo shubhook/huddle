@@ -99,6 +99,16 @@ curl -s -b /tmp/huddle.jar http://localhost:3000/auth/me
 
 History loads over REST (`GET /channels/:id/messages`). Live sends use the WebSocket (`join_channel` / `send_message`). The browser attaches the `jwt_token` cookie on upgrade.
 
+## Tests
+
+Postgres has to be up and migrated. Redis does not.
+
+```bash
+bun test
+```
+
+The suite starts the API on a random port and opens two WebSocket clients against it. It also checks the per-socket queue, membership and session rechecks, and that a publish still lands in this process when Redis is down.
+
 ## API in Docker
 
 ```bash

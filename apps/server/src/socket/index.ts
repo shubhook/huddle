@@ -11,7 +11,7 @@ import { accessibleChannelPairs } from "../services/channel-access";
 import { onBusEvent, startBus } from "./bus";
 import { handleJoinChannel, handleLeaveChannel, handleSendMessage, handleSendDirectMessage, handleLeaveDirectMessage } from "./handlers";
 import { startMaintenance } from "./maintenance";
-import { clientFrameSchema, MAX_FRAME_BYTES, type ClientFrame } from "./schema";
+import { clientFrameSchema, CLOSE_SESSION_ENDED, MAX_FRAME_BYTES, type ClientFrame } from "@huddle/protocol";
 import {
     cleanupSocket,
     closeSocketsForSessions,
@@ -23,7 +23,7 @@ import {
     socketCountForUser,
     subscribeSocket,
 } from "./state";
-import { CLOSE_SESSION_ENDED, type AuthenticatedWebSocket } from "./types";
+import { type AuthenticatedWebSocket } from "./types";
 
 const parseCookies = (cookieString: string) =>
     Object.fromEntries(

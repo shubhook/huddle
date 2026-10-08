@@ -76,8 +76,14 @@ export const env = {
     githubRedirectUri,
     databaseUrl: readRequiredEnv("DATABASE_URL"),
     cookieSecure: process.env.COOKIE_SECURE === "true",
-    /** Optional. When set, realtime events fan out through Redis so several API processes can share channels. */
-    redisUrl: process.env.REDIS_URL || undefined,
+    /**
+     * Optional. When set, realtime events fan out through Redis so several API
+     * processes can share channels. Read at bus startup rather than import, so
+     * a test can point it at a closed port after this module has loaded.
+     */
+    get redisUrl(): string | undefined {
+        return process.env.REDIS_URL || undefined;
+    },
     trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
     /** For tests and local load runs only. */
     rateLimitDisabled,

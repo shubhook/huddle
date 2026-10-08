@@ -1,5 +1,6 @@
 import { WebSocket } from "ws";
-import { CLOSE_SESSION_ENDED, type AuthenticatedWebSocket } from "./types";
+import { CLOSE_SESSION_ENDED, type ServerFrame } from "@huddle/protocol";
+import { type AuthenticatedWebSocket } from "./types";
 
 export const channelSubscriptions = new Map<string, Set<AuthenticatedWebSocket>>();
 
@@ -18,7 +19,7 @@ export function socketCountForUser(userId: string): number {
     return socketsPerUser.get(userId) ?? 0;
 }
 
-export function sendFrame(ws: WebSocket, frame: Record<string, unknown>) {
+export function sendFrame(ws: WebSocket, frame: ServerFrame) {
     if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify(frame));
     }
@@ -61,7 +62,7 @@ export function cleanupSocket(ws: AuthenticatedWebSocket) {
 }
 
 /** Sends one frame to every socket on this process that joined the channel. */
-export function deliverToChannel(channelId: string, frame: unknown) {
+export function deliverToChannel(channelId: string, frame: ServerFrame) {
     const subscribers = channelSubscriptions.get(channelId);
     if (!subscribers) return;
 

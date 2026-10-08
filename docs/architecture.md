@@ -30,8 +30,9 @@ Redis is not required for a single API process. Set `REDIS_URL` when you run mor
 | --- | --- |
 | `apps/server` | Express routes, Prisma, `ws` upgrade, Redis bus |
 | `apps/web` | React UI, axios, browser WebSocket |
+| `packages/protocol` | Zod schemas for socket frames, shared by the API and the web client |
 
-There is no shared package. Types are duplicated where the client needs them.
+Client frames, server frames, and close code 4401 are defined once, in `@huddle/protocol`.
 
 ## Request path (signed-in chat)
 

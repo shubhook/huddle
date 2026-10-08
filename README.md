@@ -52,9 +52,10 @@ Full env, Compose, GitHub OAuth, and the smoke check live in the [setup guide](.
 ## Repo layout
 
 ```text
-apps/server   HTTP API + WebSocket
-apps/web      React client (hash routes, port 3008)
-docs/         setup and how each piece works
+apps/server        HTTP API + WebSocket
+apps/web           React client (hash routes, port 3008)
+packages/protocol  socket frame schemas shared by the API and the client
+docs/              setup and how each piece works
 ```
 
 ## Documentation

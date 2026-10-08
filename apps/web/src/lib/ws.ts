@@ -1,51 +1,20 @@
+import {
+  CLOSE_SESSION_ENDED,
+  serverFrameSchema,
+  type ClientFrame,
+  type ServerFrame,
+} from "@huddle/protocol";
 import axios from "axios";
 
 import { API_URL, getCurrentUser } from "./api";
 
 export type ConnectionStatus = "connecting" | "connected" | "disconnected";
 
-export interface NewMessageEvent {
-  id: string;
-  channelId: string;
-  senderId: string;
-  senderUsername: string;
-  senderAvatarId: string | null;
-  content: string;
-  /** Set when the sender supplied one, so their other tabs can settle a pending copy. */
-  clientMessageId: string | null;
-  createdAt: string;
-}
+export type { ServerFrame };
 
-export type IncomingMessage =
-  | { type: "new_message"; payload: NewMessageEvent }
-  | { type: "join_channel_ack"; message: string; channelId: string }
-  | { type: "leave_channel_ack"; channelId?: string; message?: string }
-  | {
-      type: "send_message_ack";
-      channelId: string;
-      messageId: string;
-      clientMessageId?: string;
-    }
-  /** Sent once per connection: the socket now receives every one of these channels. */
-  | { type: "subscribed"; channelIds: string[] }
-  /** The user joined more channels while connected, and the socket receives them too. */
-  | { type: "channels_added"; channelIds: string[] }
-  | { type: "removed_from_channel"; channelId: string }
-  | { type: "channel_deleted"; channelId: string }
-  | {
-      type: "error";
-      code?: string;
-      message: string;
-      clientMessageId?: string;
-      retryAfterSeconds?: number;
-    };
-
-type MessageListener = (message: IncomingMessage) => void;
+type MessageListener = (message: ServerFrame) => void;
 type StatusListener = (status: ConnectionStatus) => void;
 type SessionListener = () => void;
-
-/** The server sends this close code when the session ended, so retrying cannot help. */
-const CLOSE_SESSION_ENDED = 4401;
 
 const RECONNECT_BASE_MS = 500;
 const RECONNECT_MAX_MS = 15_000;
@@ -67,9 +36,9 @@ function setStatus(next: ConnectionStatus) {
   statusListeners.forEach((listener) => listener(status));
 }
 
-function send(type: string, payload: Record<string, unknown>): boolean {
+function send(frame: ClientFrame): boolean {
   if (socket?.readyState !== WebSocket.OPEN) return false;
-  socket.send(JSON.stringify({ type, payload }));
+  socket.send(JSON.stringify(frame));
   return true;
 }
 
@@ -173,8 +142,9 @@ function openSocket() {
   ws.addEventListener("message", (event) => {
     if (!isCurrent()) return;
     try {
-      const parsed = JSON.parse(event.data) as IncomingMessage;
-      messageListeners.forEach((listener) => listener(parsed));
+      const result = serverFrameSchema.safeParse(JSON.parse(event.data));
+      if (!result.success) return;
+      messageListeners.forEach((listener) => listener(result.data));
     } catch {
       // ignore malformed frames
     }
@@ -235,11 +205,11 @@ if (typeof window !== "undefined") {
 
 /** Returns false when the socket is not open, so the caller can keep the user's draft. */
 export function joinChannel(channelId: string, workspaceId: string): boolean {
-  return send("join_channel", { channelId, workspaceId });
+  return send({ type: "join_channel", payload: { channelId, workspaceId } });
 }
 
 export function leaveChannel(channelId: string): boolean {
-  return send("leave_channel", { channelId });
+  return send({ type: "leave_channel", payload: { channelId } });
 }
 
 /**
@@ -260,11 +230,9 @@ export function sendChannelMessage(
     retryOf ??
     globalThis.crypto?.randomUUID?.() ??
     `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-  const sent = send("send_message", {
-    channelId,
-    workspaceId,
-    content,
-    clientMessageId,
+  const sent = send({
+    type: "send_message",
+    payload: { channelId, workspaceId, content, clientMessageId },
   });
   return sent ? clientMessageId : null;
 }

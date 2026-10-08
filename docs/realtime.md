@@ -19,7 +19,7 @@ Close code 4401 means the session ended. The client must not reconnect. Any othe
 
 ## Frames the client may send
 
-Zod schema: `apps/server/src/socket/schema.ts`. Bad JSON, unknown types, and bad fields get an `error` frame with a `code`.
+Zod schemas for both directions live in `packages/protocol` (`@huddle/protocol`). The server parses client frames with that schema. The web client parses server frames with the same one. Bad JSON, unknown types, and bad fields get an `error` frame with a `code`.
 
 | Type | Payload | Server reply |
 | --- | --- | --- |
