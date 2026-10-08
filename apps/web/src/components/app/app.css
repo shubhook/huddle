@@ -825,7 +825,9 @@
 
   .empty__cards {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    /* One column per card; members without invite/create rights see fewer. */
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
     gap: 10px;
     width: 100%;
     margin-top: 28px;
@@ -1513,7 +1515,7 @@
   .app .banner { margin: 10px 14px 0; }
   .app .notice { width: calc(100% - 28px); }
 
-  .app .empty__cards { grid-template-columns: 1fr; }
+  .app .empty__cards { grid-auto-flow: row; }
 
   .app[data-drawer] .scrim {
     display: block;

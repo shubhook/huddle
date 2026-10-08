@@ -7,7 +7,8 @@ import { channelAuth } from "../middleware/channel.middleware";
 
 export const channelRouter = Router();
 
-channelRouter.post('/workspaces/:id/channels', requireAuth, workspaceAuth, asyncHandler(createChannel));
+// Only owners and admins shape the workspace's channel list.
+channelRouter.post('/workspaces/:id/channels', requireAuth, workspaceAuth, requireWorkspaceRole("owner", "admin"), asyncHandler(createChannel));
 channelRouter.get('/workspaces/:id/channels', requireAuth, workspaceAuth, asyncHandler(getAllChannels));
 channelRouter.get('/channels/:id', requireAuth, channelAuth, asyncHandler(getChannelDetails));
 // channelAuth sets req.userRole from the channel's workspace, which the role check reads.
