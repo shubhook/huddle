@@ -56,7 +56,7 @@ checkJwtSecret(jwtSecret);
 
 const rateLimitDisabled = process.env.RATE_LIMIT_DISABLED === "true";
 if (rateLimitDisabled) {
-    console.warn("WARNING: RATE_LIMIT_DISABLED=true. Login and signup are not rate limited. Never use this in production.");
+    console.warn("WARNING: RATE_LIMIT_DISABLED=true. Login, signup, invites and message sends are not rate limited. Never use this in production.");
 }
 
 export const env = {

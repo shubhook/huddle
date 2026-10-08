@@ -2,7 +2,8 @@ import type { WebSocketServer } from "ws";
 import { prisma } from "../db";
 import { env } from "../utils/env";
 import { pruneExpiredSessions } from "../services/session.service";
-import { closeSocketsForSessions, connectedSessionIds, evictFromChannel, subscribedPairs } from "./state";
+import { accessibleChannelPairs } from "../services/channel-access";
+import { closeSocketsForSessions, connectedSessionIds, evictFromChannel, subscriptionsByUser } from "./state";
 import type { AuthenticatedWebSocket } from "./types";
 
 /**
@@ -31,26 +32,20 @@ function sweepDeadSockets(wss: WebSocketServer) {
 const RECHECK_CHUNK = 200;
 
 /**
- * Membership is checked when a socket joins a channel. This catches users who
- * lose access afterward, so they stop receiving messages. One query covers up
- * to RECHECK_CHUNK subscriptions.
+ * Membership is checked when a socket subscribes. This catches users who lose access
+ * afterward, so they stop receiving messages. One query covers up to RECHECK_CHUNK users.
  */
 export async function revalidateSubscriptions() {
-    const pairs = subscribedPairs();
+    const byUser = [...subscriptionsByUser()];
 
-    for (let i = 0; i < pairs.length; i += RECHECK_CHUNK) {
-        const chunk = pairs.slice(i, i + RECHECK_CHUNK);
+    for (let i = 0; i < byUser.length; i += RECHECK_CHUNK) {
+        const chunk = byUser.slice(i, i + RECHECK_CHUNK);
+        const allowed = await accessibleChannelPairs(chunk.map(([userId]) => userId));
+        const stillMember = new Set(allowed.map((row) => `${row.userId}:${row.channelId}`));
 
-        const rows = await prisma.channelMember.findMany({
-            where: { OR: chunk.map(({ userId, channelId }) => ({ userId, channelId })) },
-            select: { userId: true, channelId: true },
-        });
-
-        const stillMember = new Set(rows.map((row) => `${row.userId}:${row.channelId}`));
-
-        for (const { userId, channelId } of chunk) {
-            if (!stillMember.has(`${userId}:${channelId}`)) {
-                evictFromChannel(userId, channelId);
+        for (const [userId, channelIds] of chunk) {
+            for (const channelId of channelIds) {
+                if (!stillMember.has(`${userId}:${channelId}`)) evictFromChannel(userId, channelId);
             }
         }
     }

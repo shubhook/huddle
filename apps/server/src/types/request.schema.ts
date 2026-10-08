@@ -23,8 +23,16 @@ export const new_channel_schema = z.object({
         .refine((value) => !/\p{Cc}/u.test(value), "name cannot contain control characters")
 });
 
+/** Picked by the client per send. Repeating one returns the saved message instead of a duplicate. */
+export const clientMessageId = z.string().min(1).max(64);
+
 export const message_schema = z.object({
-    content: messageContent
+    content: messageContent,
+    clientMessageId: clientMessageId.optional()
+});
+
+export const mark_read_schema = z.object({
+    messageId: z.string().min(1).max(64)
 });
 
 export const direct_message_schema = z.object({

@@ -2,7 +2,7 @@ import { WebSocket } from "ws";
 import type { ClientFrame } from "./schema";
 import type { AuthenticatedWebSocket } from "./types";
 import { assertChannelAccess, ChannelAccessError } from "../services/channel-access";
-import { sendChannelMessage } from "../services/message.service";
+import { MessageRateLimitError, sendChannelMessage } from "../services/message.service";
 import { sendError, sendFrame, subscribe, unsubscribe } from "./state";
 
 type Payload<T extends ClientFrame["type"]> = Extract<ClientFrame, { type: T }>["payload"];
@@ -37,17 +37,22 @@ export async function handleSendMessage(ws: AuthenticatedWebSocket, payload: Pay
             channelId,
             workspaceId,
             content,
+            clientMessageId,
         });
 
         sendFrame(ws, {
             type: "send_message_ack",
-            channelId,
+            channelId: message.channelId,
             messageId: message.id,
             ...(clientMessageId ? { clientMessageId } : {}),
         });
     } catch (err) {
         if (err instanceof ChannelAccessError) {
             sendError(ws, err.code, err.message, { clientMessageId });
+            return;
+        }
+        if (err instanceof MessageRateLimitError) {
+            sendError(ws, "rate_limited", err.message, { clientMessageId, retryAfterSeconds: err.retryAfterSeconds });
             return;
         }
         throw err;

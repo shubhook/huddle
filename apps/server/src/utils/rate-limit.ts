@@ -37,13 +37,44 @@ async function hit(key: string, windowMs: number): Promise<{ count: number; retr
 export const fingerprint = (value: string) =>
     createHash("sha256").update(value).digest("hex").slice(0, 16);
 
-export interface RateLimitRule {
+export interface LimitWindow {
     /** Groups counters, for example "signin-ip". */
     name: string;
     windowMs: number;
     max: number;
+}
+
+export interface RateLimitRule extends LimitWindow {
     /** Who the limit applies to. Return null to skip the rule for this request. */
     key: (req: Request) => string | null;
+}
+
+/** Retry-After seconds when the rule is exceeded, or null when the hit is within the limit. */
+async function exceeded(rule: LimitWindow, who: string): Promise<number | null> {
+    const { count, retryAfterMs } = await hit(`${rule.name}:${who}`, rule.windowMs);
+    if (count <= rule.max) return null;
+    return Math.max(1, Math.ceil(retryAfterMs / 1000));
+}
+
+/**
+ * Counts one hit against a rule outside of a route, for limits that span REST and the
+ * websocket. Returns the Retry-After seconds when the caller is over the limit, else null.
+ * Fails open like the middleware does.
+ */
+export async function consumeLimit(rule: LimitWindow, who: string): Promise<number | null> {
+    if (env.rateLimitDisabled) return null;
+    try {
+        return await exceeded(rule, who);
+    } catch (err) {
+        console.error("rate limiter failed", err);
+        return null;
+    }
+}
+
+/** Answers 429 with Retry-After and a message that says how long to wait. */
+export function sendTooMany(res: Response, seconds: number, what = "attempts") {
+    res.setHeader("Retry-After", String(seconds));
+    res.status(429).json({ message: `Too many ${what}. Try again in ${formatWait(seconds)}.` });
 }
 
 /**
@@ -61,14 +92,9 @@ export function rateLimit(...rules: RateLimitRule[]): RequestHandler {
                 const who = rule.key(req);
                 if (who === null) continue;
 
-                const { count, retryAfterMs } = await hit(`${rule.name}:${who}`, rule.windowMs);
-
-                if (count > rule.max) {
-                    const seconds = Math.max(1, Math.ceil(retryAfterMs / 1000));
-                    res.setHeader("Retry-After", String(seconds));
-                    res.status(429).json({
-                        message: `Too many attempts. Try again in ${formatWait(seconds)}.`,
-                    });
+                const seconds = await exceeded(rule, who);
+                if (seconds !== null) {
+                    sendTooMany(res, seconds);
                     return;
                 }
             }

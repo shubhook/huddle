@@ -11,6 +11,8 @@ export interface NewMessageEvent {
   senderUsername: string;
   senderAvatarId: string | null;
   content: string;
+  /** Set when the sender supplied one, so their other tabs can settle a pending copy. */
+  clientMessageId: string | null;
   createdAt: string;
 }
 
@@ -24,6 +26,10 @@ export type IncomingMessage =
       messageId: string;
       clientMessageId?: string;
     }
+  /** Sent once per connection: the socket now receives every one of these channels. */
+  | { type: "subscribed"; channelIds: string[] }
+  /** The user joined more channels while connected, and the socket receives them too. */
+  | { type: "channels_added"; channelIds: string[] }
   | { type: "removed_from_channel"; channelId: string }
   | { type: "channel_deleted"; channelId: string }
   | {
@@ -31,6 +37,7 @@ export type IncomingMessage =
       code?: string;
       message: string;
       clientMessageId?: string;
+      retryAfterSeconds?: number;
     };
 
 type MessageListener = (message: IncomingMessage) => void;
@@ -238,14 +245,19 @@ export function leaveChannel(channelId: string): boolean {
 /**
  * Returns the clientMessageId the server will echo in its ack or error,
  * or null when the socket is not open and nothing was sent.
+ *
+ * Pass the id of an earlier send to retry it. The server saves a message once per id,
+ * so a retry after a lost ack gets the saved one back instead of a duplicate.
  */
 export function sendChannelMessage(
   channelId: string,
   workspaceId: string,
   content: string,
+  retryOf?: string,
 ): string | null {
   // randomUUID exists only in secure contexts (https or localhost).
   const clientMessageId =
+    retryOf ??
     globalThis.crypto?.randomUUID?.() ??
     `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   const sent = send("send_message", {

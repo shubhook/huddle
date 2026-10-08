@@ -18,6 +18,9 @@ Sign-in does not apply those rules, so older accounts still work. An unknown ema
 | Signup | 10 / hour / IP |
 | Join | 20 / hour / user, 60 / hour / IP |
 | Invite | 20 / hour / user |
+| Message send | 20 / 10 s / user, socket and REST together |
+| Mark read | 120 / min / user |
+| Open sockets | 10 / user / process (counted in memory, not Redis) |
 
 Account keys are a SHA-256 fingerprint of the email, not the email itself. `RATE_LIMIT_DISABLED=true` turns this off. Never set that in production. The server warns on boot if you do.
 
@@ -58,4 +61,4 @@ Only an owner can create, list, or revoke invites. Cap 25 active. Any member can
 - Signup cannot hide whether an email or username is taken without sending a verification email, which the app does not do. The response is the same for both and signup is rate limited, so it costs an attacker time but not certainty. The same gap lets someone register an address they do not own.
 - There is no password reset, and no way to link a GitHub account to an existing password account.
 - Frame size is checked after the bytes are in memory. Bun's own ceiling is the real upper bound.
-- Message rate limit is "frames in flight per socket," not messages per minute.
+- The socket cap is per process. A user spread across several API processes can hold 10 sockets on each.

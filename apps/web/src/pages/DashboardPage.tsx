@@ -16,9 +16,12 @@ import { ProfileView } from "@/components/app/ProfileView";
 import { useTheme } from "@/components/app/useTheme";
 import { WorkspaceRail } from "@/components/app/WorkspaceRail";
 import { Icon } from "@/components/ui/Icon";
+import axios from "axios";
+
 import {
   avatarUrl,
   type ChannelDetails as ChannelDetailsData,
+  type ChannelMessage,
   createChannel,
   createInvite,
   type CurrentUser,
@@ -27,6 +30,7 @@ import {
   getChannelDetails,
   getMessages,
   getWorkspace,
+  markChannelRead,
   removeAvatar,
   uploadAvatar,
   type WorkspaceSummary,
@@ -38,7 +42,6 @@ import {
   disconnectSocket,
   getConnectionStatus,
   joinChannel,
-  leaveChannel,
   onMessage,
   onStatusChange,
   sendChannelMessage,
@@ -54,6 +57,8 @@ interface Channel {
 interface PendingSend {
   clientMessageId: string;
   channelId: string;
+  /** Resends after a reconnect go to the workspace the message was written in. */
+  workspaceId: string;
   content: string;
   createdAt: string;
   failed: boolean;
@@ -75,6 +80,13 @@ const SEND_CONFIRM_TIMEOUT_MS = 10_000;
 const NOTICE_VISIBLE_MS = 6_000;
 /** Quiet time before the workspace is written to the local cache. */
 const CACHE_WRITE_DELAY_MS = 500;
+/** Quiet time on an open channel before its read marker moves on the server. */
+const MARK_READ_DELAY_MS = 1_000;
+/**
+ * Pages of 50 fetched forward when catching up a channel. Further behind than that,
+ * the channel starts over from its newest page and older ones load on scroll.
+ */
+const MAX_CATCH_UP_PAGES = 4;
 
 /** Prefix for a channel shown before the server has created it. */
 const PENDING_CHANNEL_PREFIX = "pending:";
@@ -88,7 +100,44 @@ const isPendingChannel = (channelId: string) => channelId.startsWith(PENDING_CHA
 function mergeMessages(current: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] {
   const byId = new Map(current.map((message) => [message.id, message]));
   for (const message of incoming) byId.set(message.id, message);
-  return [...byId.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  return [...byId.values()].sort(compareMessages);
+}
+
+/** Server time, then id, the same order the server pages in. */
+function compareMessages(a: ChatMessage, b: ChatMessage): number {
+  return a.createdAt.localeCompare(b.createdAt) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+}
+
+/** Messages are kept sorted oldest first, so the newest of a channel is the last match. */
+function newestIn(messages: ChatMessage[], channelId: string): ChatMessage | undefined {
+  return messages.findLast((message) => message.channel === channelId);
+}
+
+function oldestIn(messages: ChatMessage[], channelId: string): ChatMessage | undefined {
+  return messages.find((message) => message.channel === channelId);
+}
+
+function toChatMessage(message: ChannelMessage): ChatMessage {
+  return {
+    id: message.id,
+    sender: message.sender.username,
+    senderId: message.senderId,
+    senderAvatarId: message.sender.avatarId,
+    channel: message.channelId,
+    createdAt: message.createdAt,
+    content: message.content,
+  };
+}
+
+/** Tracks whether the tab is on screen. A hidden tab has not read what arrives in it. */
+function usePageVisible(): boolean {
+  const [visible, setVisible] = useState(() => document.visibilityState === "visible");
+  useEffect(() => {
+    const update = () => setVisible(document.visibilityState === "visible");
+    document.addEventListener("visibilitychange", update);
+    return () => document.removeEventListener("visibilitychange", update);
+  }, []);
+  return visible;
 }
 
 export function DashboardPage({
@@ -110,8 +159,13 @@ export function DashboardPage({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   /** Channels whose history has been fetched at least once. */
   const [loadedChannels, setLoadedChannels] = useState<ReadonlySet<string>>(new Set());
-  /** Channels with live messages that arrived while they were not open. */
+  /** Channels with messages from others after the read marker. Seeded by the server, then kept live. */
   const [unread, setUnread] = useState<ReadonlySet<string>>(new Set());
+  /** Channels whose oldest message has been loaded, so there is nothing further back. */
+  const [exhausted, setExhausted] = useState<ReadonlySet<string>>(new Set());
+  const [loadingOlder, setLoadingOlder] = useState<string | null>(null);
+  /** Bumped on every `subscribed` frame, so effects can react to a fresh subscription. */
+  const [subscription, setSubscription] = useState(0);
   const [pending, setPending] = useState<PendingSend[]>([]);
   /** Ids of messages this tab sent and the server confirmed. */
   const [delivered, setDelivered] = useState<ReadonlySet<string>>(new Set());
@@ -144,6 +198,20 @@ export function DashboardPage({
   channelsRef.current = channels;
   // Channels this tab is deleting. Their channel_deleted frame needs no notice.
   const deletingIds = useRef(new Set<string>());
+  // Read by fetches that finish later, to page from the right message and to drop
+  // results for a workspace the user has already left.
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+  const workspaceRef = useRef(workspaceId);
+  workspaceRef.current = workspaceId;
+  // Channels this connection receives. Null until the server's `subscribed` frame.
+  const subscribedRef = useRef<Set<string> | null>(null);
+  // Channels a join_channel was sent for on this connection, so it is sent once.
+  const joinRequested = useRef(new Set<string>());
+  // The newest message id sent as each channel's read marker.
+  const lastMarked = useRef(new Map<string, string>());
+  const olderInFlight = useRef(new Set<string>());
+  const pageVisible = usePageVisible();
 
   useEffect(() => {
     if (!notice) return;
@@ -159,25 +227,198 @@ export function DashboardPage({
     };
   }, []);
 
-  const loadHistory = useCallback(async (channelId: string) => {
-    try {
-      const batch = await getMessages(channelId);
-      const loaded = batch.map((message) => ({
-        id: message.id,
-        sender: message.sender.username,
-        senderId: message.senderId,
-        senderAvatarId: message.sender.avatarId,
-        channel: message.channelId,
-        createdAt: message.createdAt,
-        content: message.content,
-      }));
-      loaded.forEach((message) => knownSenders.current.add(message.sender));
-      setMessages((current) => mergeMessages(current, loaded));
-      setLoadedChannels((current) => new Set(current).add(channelId));
-    } catch {
-      setNotice("Could not load message history.");
-    }
+  /** The server saved this send: drop the placeholder and show it as delivered. */
+  const confirmSend = useCallback((clientMessageId: string, messageId: string) => {
+    const timer = ackTimers.current.get(clientMessageId);
+    if (timer) clearTimeout(timer);
+    ackTimers.current.delete(clientMessageId);
+    setDelivered((current) => new Set(current).add(messageId));
+    setPending((current) =>
+      current.filter((entry) => entry.clientMessageId !== clientMessageId),
+    );
   }, []);
+
+  /** Starts the timer that marks a send unconfirmed if no ack arrives. */
+  const armAckTimer = useCallback((clientMessageId: string) => {
+    const existing = ackTimers.current.get(clientMessageId);
+    if (existing) clearTimeout(existing);
+    ackTimers.current.set(
+      clientMessageId,
+      setTimeout(() => {
+        ackTimers.current.delete(clientMessageId);
+        setPending((current) =>
+          current.map((entry) =>
+            entry.clientMessageId === clientMessageId ? { ...entry, failed: true } : entry,
+          ),
+        );
+        setNotice("A message was not confirmed and may not have been delivered.");
+      }, SEND_CONFIRM_TIMEOUT_MS),
+    );
+  }, []);
+
+  /**
+   * Bookkeeping for messages fetched over REST. A pending send of ours that shows up here
+   * was saved, and its ack was lost.
+   */
+  const receiveFetched = useCallback(
+    (batch: ChannelMessage[]) => {
+      for (const message of batch) {
+        knownSenders.current.add(message.sender.username);
+        if (
+          message.senderId === user.id &&
+          message.clientMessageId &&
+          pendingRef.current.some((send) => send.clientMessageId === message.clientMessageId)
+        ) {
+          confirmSend(message.clientMessageId, message.id);
+        }
+      }
+      return batch.map(toChatMessage);
+    },
+    [user.id, confirmSend],
+  );
+
+  /**
+   * Fetches what this tab is missing for a channel: everything after the newest message it
+   * has, page by page. Too far behind, or holding nothing yet, it takes the newest page
+   * instead and older pages load on scroll. Call it after the socket is subscribed to the
+   * channel, so a message sent during the fetch arrives live.
+   */
+  const syncChannel = useCallback(
+    async (channelId: string) => {
+      const forWorkspace = workspaceRef.current;
+      const fetched: ChannelMessage[] = [];
+      let startOver = true;
+      let olderExhausted: boolean | undefined;
+
+      try {
+        let after = newestIn(messagesRef.current, channelId)?.id;
+        if (after) {
+          try {
+            for (let page = 0; page < MAX_CATCH_UP_PAGES; page++) {
+              const { messages: batch, hasMore } = await getMessages(channelId, { after });
+              fetched.push(...batch);
+              if (!hasMore || batch.length === 0) {
+                startOver = false;
+                break;
+              }
+              after = batch[batch.length - 1]!.id;
+            }
+          } catch (error) {
+            // A 400 means the server does not know the message we hold (a cache from another
+            // database, say). Anything else is a real failure.
+            if (!axios.isAxiosError(error) || error.response?.status !== 400) throw error;
+          }
+        }
+
+        if (startOver) {
+          const { messages: batch, hasMore } = await getMessages(channelId);
+          fetched.splice(0, fetched.length, ...batch);
+          olderExhausted = !hasMore;
+        }
+
+        if (workspaceRef.current !== forWorkspace) return;
+
+        const loaded = receiveFetched(fetched);
+        const oldestLoaded = loaded.reduce<ChatMessage | undefined>(
+          (oldest, message) => (!oldest || compareMessages(message, oldest) < 0 ? message : oldest),
+          undefined,
+        );
+        setMessages((current) => {
+          if (!startOver) return mergeMessages(current, loaded);
+          // Starting over leaves a gap below the new page, so drop what is under it. Live
+          // messages that landed while the page was in flight are newer and stay.
+          const kept = current.filter(
+            (message) =>
+              message.channel !== channelId ||
+              (oldestLoaded !== undefined && compareMessages(message, oldestLoaded) >= 0),
+          );
+          return mergeMessages(kept, loaded);
+        });
+        if (olderExhausted !== undefined) {
+          setExhausted((current) => {
+            if (current.has(channelId) === olderExhausted) return current;
+            const next = new Set(current);
+            if (olderExhausted) next.add(channelId);
+            else next.delete(channelId);
+            return next;
+          });
+        }
+        setLoadedChannels((current) => new Set(current).add(channelId));
+      } catch {
+        if (workspaceRef.current === forWorkspace) setNotice("Could not load message history.");
+      }
+    },
+    [receiveFetched],
+  );
+
+  /** One page further back than the oldest message loaded for the channel. */
+  const loadOlder = useCallback(
+    async (channelId: string) => {
+      const oldest = oldestIn(messagesRef.current, channelId);
+      if (!oldest || olderInFlight.current.has(channelId)) return;
+      const forWorkspace = workspaceRef.current;
+
+      olderInFlight.current.add(channelId);
+      setLoadingOlder(channelId);
+      try {
+        const { messages: batch, hasMore } = await getMessages(channelId, { before: oldest.id });
+        if (workspaceRef.current !== forWorkspace) return;
+        const loaded = receiveFetched(batch);
+        setMessages((current) => mergeMessages(current, loaded));
+        if (!hasMore) setExhausted((current) => new Set(current).add(channelId));
+      } catch {
+        if (workspaceRef.current === forWorkspace) setNotice("Could not load older messages.");
+      } finally {
+        olderInFlight.current.delete(channelId);
+        setLoadingOlder((current) => (current === channelId ? null : current));
+      }
+    },
+    [receiveFetched],
+  );
+
+  /** Sends every unconfirmed message again under its original id. The server keeps one copy. */
+  const resendPending = useCallback(() => {
+    const resent = new Set<string>();
+    for (const send of pendingRef.current) {
+      const sent = sendChannelMessage(
+        send.channelId,
+        send.workspaceId,
+        send.content,
+        send.clientMessageId,
+      );
+      if (sent === null) continue;
+      resent.add(sent);
+      armAckTimer(sent);
+    }
+    if (resent.size === 0) return;
+    setPending((current) =>
+      current.map((entry) =>
+        resent.has(entry.clientMessageId) && entry.failed ? { ...entry, failed: false } : entry,
+      ),
+    );
+  }, [armAckTimer]);
+
+  /** Picks up channels created since the list was fetched. Placeholders still being created stay. */
+  const refreshChannels = useCallback(() => {
+    const forWorkspace = workspaceRef.current;
+    getWorkspace(forWorkspace)
+      .then((workspace) => {
+        if (workspaceRef.current !== forWorkspace) return;
+        const fresh = workspace.channels.map(({ id, name }) => ({ id, name }));
+        const added = fresh.filter(
+          (channel) => !channelsRef.current.some((known) => known.id === channel.id),
+        );
+        setChannels((current) => [
+          ...fresh,
+          ...current.filter(
+            (channel) =>
+              isPendingChannel(channel.id) && !fresh.some((other) => other.name === channel.name),
+          ),
+        ]);
+        added.forEach((channel) => void syncChannel(channel.id));
+      })
+      .catch(() => {});
+  }, [syncChannel]);
 
   /** Forgets a deleted channel and everything loaded for it. */
   const dropChannel = useCallback((channelId: string) => {
@@ -192,13 +433,14 @@ export function DashboardPage({
     setPending((current) => current.filter((send) => send.channelId !== channelId));
     setLoadedChannels((current) => without(current, channelId));
     setUnread((current) => without(current, channelId));
+    setExhausted((current) => without(current, channelId));
     setActiveChannelId((current) => (current === channelId ? null : current));
     setDeleteTarget((current) => (current?.id === channelId ? null : current));
   }, []);
 
   // A new workspace starts from what this browser last saw of it, or from a
-  // clean slate. Either way the server's copy replaces it. History for every
-  // channel is fetched up front so switching channels is instant.
+  // clean slate. Either way the server's copy replaces it. Every channel is caught
+  // up front, from the newest message cached for it, so switching channels is instant.
   useEffect(() => {
     if (!workspaceId) return;
     let cancelled = false;
@@ -208,7 +450,8 @@ export function DashboardPage({
     setChannels(snapshot?.channels ?? []);
     setMessages(snapshot?.messages ?? []);
     setLoadedChannels(new Set(snapshot?.channels.map((channel) => channel.id)));
-    setUnread(new Set());
+    setUnread(new Set(snapshot?.unreadChannelIds));
+    setExhausted(new Set());
     setActiveChannelId(snapshot?.activeChannelId ?? null);
     setWorkspaceName(snapshot?.name ?? "");
     setMemberCount(snapshot?.memberCount ?? null);
@@ -225,13 +468,14 @@ export function DashboardPage({
         setWorkspaceName(workspace.general.name);
         setMemberCount(workspace.members.length);
         setChannels(fresh);
+        setUnread(new Set(workspace.unreadChannelIds));
         // Keep the channel the user is on, unless it no longer exists.
         setActiveChannelId((current) =>
           current && fresh.some((channel) => channel.id === current)
             ? current
             : (fresh[0]?.id ?? null),
         );
-        fresh.forEach((channel) => void loadHistory(channel.id));
+        fresh.forEach((channel) => void syncChannel(channel.id));
       })
       .catch(() => {
         if (!cancelled) setNotice("Could not load this workspace.");
@@ -240,7 +484,7 @@ export function DashboardPage({
     return () => {
       cancelled = true;
     };
-  }, [workspaceId, loadHistory, user.username]);
+  }, [workspaceId, syncChannel, user.username]);
 
   // Remember the workspace for the next visit. Pending sends and channels the
   // server has not created yet are left out.
@@ -254,10 +498,11 @@ export function DashboardPage({
         activeChannelId:
           activeChannelId && !isPendingChannel(activeChannelId) ? activeChannelId : null,
         messages,
+        unreadChannelIds: [...unread].filter((channelId) => !isPendingChannel(channelId)),
       });
     }, CACHE_WRITE_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [stateWorkspaceId, workspaceName, memberCount, channels, activeChannelId, messages]);
+  }, [stateWorkspaceId, workspaceName, memberCount, channels, activeChannelId, messages, unread]);
 
   useEffect(() => {
     connectSocket();
@@ -270,6 +515,11 @@ export function DashboardPage({
 
   useEffect(() => {
     if (status === "connected") setHasConnected(true);
+    // A new connection starts with no subscriptions until the server says otherwise.
+    else {
+      subscribedRef.current = null;
+      joinRequested.current.clear();
+    }
   }, [status]);
 
   useEffect(() => {
@@ -278,11 +528,37 @@ export function DashboardPage({
       if (timer) clearTimeout(timer);
       ackTimers.current.delete(clientMessageId);
     };
+    // The socket carries every channel the user is in, across workspaces. Only this
+    // workspace's channels belong on this page.
+    const isKnownChannel = (channelId: string) =>
+      channelsRef.current.some((channel) => channel.id === channelId);
 
     return onMessage((message) => {
       switch (message.type) {
+        case "subscribed":
+          // The socket now receives every channel live. Fetching after this covers
+          // whatever was sent before it, including messages missed while it was down,
+          // and resending covers sends whose ack was lost with the old socket.
+          subscribedRef.current = new Set(message.channelIds);
+          joinRequested.current.clear();
+          setSubscription((current) => current + 1);
+          channelsRef.current
+            .filter((channel) => !isPendingChannel(channel.id))
+            .forEach((channel) => void syncChannel(channel.id));
+          resendPending();
+          break;
+
+        case "channels_added":
+          message.channelIds.forEach((channelId) => subscribedRef.current?.add(channelId));
+          if (message.channelIds.some((channelId) => !isKnownChannel(channelId))) {
+            refreshChannels();
+          }
+          message.channelIds.filter(isKnownChannel).forEach((channelId) => void syncChannel(channelId));
+          break;
+
         case "new_message": {
           const payload = message.payload;
+          if (!isKnownChannel(payload.channelId)) break;
           if (!knownSenders.current.has(payload.senderUsername)) {
             knownSenders.current.add(payload.senderUsername);
             getWorkspace(workspaceId)
@@ -302,8 +578,16 @@ export function DashboardPage({
               },
             ]),
           );
+          // Our own send, possibly from this tab after a lost ack.
           if (
-            payload.senderUsername !== user.username &&
+            payload.senderId === user.id &&
+            payload.clientMessageId &&
+            pendingRef.current.some((send) => send.clientMessageId === payload.clientMessageId)
+          ) {
+            confirmSend(payload.clientMessageId, payload.id);
+          }
+          if (
+            payload.senderId !== user.id &&
             payload.channelId !== viewingRef.current
           ) {
             setUnread((current) => new Set(current).add(payload.channelId));
@@ -312,16 +596,14 @@ export function DashboardPage({
         }
 
         case "join_channel_ack":
-          // The socket is subscribed now, so anything sent from here on arrives live.
-          // Fetching after the join covers whatever was sent before it, including
-          // messages missed while the socket was down.
-          void loadHistory(message.channelId);
+          // Only sent for a channel the `subscribed` frame missed. Same rule: fetch after joining.
+          subscribedRef.current?.add(message.channelId);
+          void syncChannel(message.channelId);
           break;
 
         case "send_message_ack": {
           const clientMessageId = message.clientMessageId;
           if (!clientMessageId) break;
-          settle(clientMessageId);
           const send = pendingRef.current.find(
             (entry) => entry.clientMessageId === clientMessageId,
           );
@@ -342,10 +624,7 @@ export function DashboardPage({
               ]),
             );
           }
-          setDelivered((current) => new Set(current).add(message.messageId));
-          setPending((current) =>
-            current.filter((entry) => entry.clientMessageId !== clientMessageId),
-          );
+          confirmSend(clientMessageId, message.messageId);
           break;
         }
 
@@ -384,7 +663,16 @@ export function DashboardPage({
           break;
       }
     });
-  }, [loadHistory, dropChannel, user.username, workspaceId]);
+  }, [
+    syncChannel,
+    resendPending,
+    refreshChannels,
+    confirmSend,
+    dropChannel,
+    user.id,
+    user.username,
+    workspaceId,
+  ]);
 
   const activeChannel = useMemo(
     () => channels.find((channel) => channel.id === activeChannelId) ?? channels[0],
@@ -394,6 +682,7 @@ export function DashboardPage({
   const viewingId = view === "chat" ? (activeChannel?.id ?? null) : null;
   viewingRef.current = viewingId;
 
+  // The open channel is being read, whatever the server or the socket said about it.
   useEffect(() => {
     if (!viewingId) return;
     setUnread((current) => {
@@ -402,15 +691,39 @@ export function DashboardPage({
       next.delete(viewingId);
       return next;
     });
-  }, [viewingId]);
+  }, [viewingId, unread]);
 
+  // Move the server's read marker to the newest message on screen, so the unread state
+  // survives a reload and shows on the user's other devices.
+  const newestViewedId = useMemo(
+    () => (viewingId ? newestIn(messages, viewingId)?.id : undefined),
+    [messages, viewingId],
+  );
   useEffect(() => {
-    if (status !== "connected" || !activeChannel || isPendingChannel(activeChannel.id)) return;
-    joinChannel(activeChannel.id, workspaceId);
-    return () => {
-      leaveChannel(activeChannel.id);
-    };
-  }, [activeChannel?.id, workspaceId, status]);
+    if (!pageVisible || !viewingId || !newestViewedId || isPendingChannel(viewingId)) return;
+    if (lastMarked.current.get(viewingId) === newestViewedId) return;
+    const timer = setTimeout(() => {
+      lastMarked.current.set(viewingId, newestViewedId);
+      markChannelRead(viewingId, newestViewedId).catch(() => {
+        // Try again with the next message or the next visit.
+        if (lastMarked.current.get(viewingId) === newestViewedId) lastMarked.current.delete(viewingId);
+      });
+    }, MARK_READ_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [pageVisible, viewingId, newestViewedId]);
+
+  // The socket subscribes to every channel at connect, and to new ones as they are created.
+  // A channel that still slipped through (an event lost while Redis was down) is joined here.
+  useEffect(() => {
+    const subscribed = subscribedRef.current;
+    if (status !== "connected" || !subscribed) return;
+    for (const channel of channels) {
+      if (isPendingChannel(channel.id) || subscribed.has(channel.id)) continue;
+      if (joinRequested.current.has(channel.id)) continue;
+      joinRequested.current.add(channel.id);
+      joinChannel(channel.id, workspaceId);
+    }
+  }, [channels, status, subscription, workspaceId]);
 
   // A channel still being created has no details to fetch, and nothing to delete.
   const detailsChannelId =
@@ -542,23 +855,13 @@ export function DashboardPage({
       {
         clientMessageId,
         channelId: activeChannel.id,
+        workspaceId,
         content,
         createdAt: new Date().toISOString(),
         failed: false,
       },
     ]);
-    ackTimers.current.set(
-      clientMessageId,
-      setTimeout(() => {
-        ackTimers.current.delete(clientMessageId);
-        setPending((current) =>
-          current.map((entry) =>
-            entry.clientMessageId === clientMessageId ? { ...entry, failed: true } : entry,
-          ),
-        );
-        setNotice("A message was not confirmed and may not have been delivered.");
-      }, SEND_CONFIRM_TIMEOUT_MS),
-    );
+    armAckTimer(clientMessageId);
     return true;
   }
 
@@ -808,6 +1111,13 @@ export function DashboardPage({
             <MessageFeed
               items={feedItems}
               scrollKey={activeChannel?.id}
+              hasOlder={
+                !!activeChannel &&
+                !exhausted.has(activeChannel.id) &&
+                messages.some((message) => message.channel === activeChannel.id)
+              }
+              loadingOlder={loadingOlder === activeChannel?.id}
+              onLoadOlder={activeChannel ? () => void loadOlder(activeChannel.id) : undefined}
               empty={
                 activeChannel ? (
                   <EmptyChannel

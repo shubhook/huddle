@@ -6,8 +6,16 @@ export const channelSubscriptions = new Map<string, Set<AuthenticatedWebSocket>>
 /** Every open socket, subscribed to something or not. */
 const connections = new Set<AuthenticatedWebSocket>();
 
+/** Open sockets per user on this process, for the per-user cap. */
+const socketsPerUser = new Map<string, number>();
+
 export function registerSocket(ws: AuthenticatedWebSocket) {
     connections.add(ws);
+    socketsPerUser.set(ws.userId, (socketsPerUser.get(ws.userId) ?? 0) + 1);
+}
+
+export function socketCountForUser(userId: string): number {
+    return socketsPerUser.get(userId) ?? 0;
 }
 
 export function sendFrame(ws: WebSocket, frame: Record<string, unknown>) {
@@ -20,7 +28,7 @@ export function sendError(
     ws: WebSocket,
     code: string,
     message: string,
-    extra: { clientMessageId?: string } = {},
+    extra: { clientMessageId?: string; retryAfterSeconds?: number } = {},
 ) {
     sendFrame(ws, { type: "error", code, message, ...extra });
 }
@@ -42,7 +50,11 @@ export function unsubscribe(channelId: string, ws: AuthenticatedWebSocket) {
 }
 
 export function cleanupSocket(ws: AuthenticatedWebSocket) {
-    connections.delete(ws);
+    if (connections.delete(ws)) {
+        const left = (socketsPerUser.get(ws.userId) ?? 1) - 1;
+        if (left > 0) socketsPerUser.set(ws.userId, left);
+        else socketsPerUser.delete(ws.userId);
+    }
     for (const channelId of [...channelSubscriptions.keys()]) {
         unsubscribe(channelId, ws);
     }
@@ -90,15 +102,38 @@ export function evictFromChannel(userId: string, channelId: string) {
     }
 }
 
-/** Distinct (user, channel) pairs currently subscribed on this process. */
-export function subscribedPairs(): { userId: string; channelId: string }[] {
-    const pairs = new Map<string, { userId: string; channelId: string }>();
+/** The channels each user is subscribed to on this process, for the periodic recheck. */
+export function subscriptionsByUser(): Map<string, Set<string>> {
+    const byUser = new Map<string, Set<string>>();
     for (const [channelId, subscribers] of channelSubscriptions) {
         for (const ws of subscribers) {
-            pairs.set(`${ws.userId}:${channelId}`, { userId: ws.userId, channelId });
+            let channels = byUser.get(ws.userId);
+            if (!channels) {
+                channels = new Set();
+                byUser.set(ws.userId, channels);
+            }
+            channels.add(channelId);
         }
     }
-    return [...pairs.values()];
+    return byUser;
+}
+
+/**
+ * Subscribes a socket to channels and tells it which ones. The client fetches what it
+ * missed for those channels only after this frame, so nothing slips between the two.
+ */
+export function subscribeSocket(ws: AuthenticatedWebSocket, channelIds: string[], type: "subscribed" | "channels_added") {
+    if (ws.readyState !== WebSocket.OPEN) return;
+    for (const channelId of channelIds) subscribe(channelId, ws);
+    sendFrame(ws, { type, channelIds });
+}
+
+/** New memberships: subscribe every open socket of those users on this process. */
+export function deliverChannelsJoined(userIds: string[], channelIds: string[]) {
+    const members = new Set(userIds);
+    for (const ws of connections) {
+        if (members.has(ws.userId)) subscribeSocket(ws, channelIds, "channels_added");
+    }
 }
 
 /**

@@ -80,6 +80,8 @@ model WorkspaceMember {
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
 
   @@unique([userId, workspaceId])
+  // The unique index leads with userId, so it cannot serve "everyone in this workspace".
+  @@index([workspaceId])
 }
 
 model Channel {
@@ -96,25 +98,38 @@ model Channel {
 }
 
 model ChannelMember {
-  id        String  @id @default(cuid())
-  userId    String
-  channelId String
+  id                String   @id @default(cuid())
+  userId            String
+  channelId         String
+  /// Newest message this user has seen in the channel. Anything after it from someone else is unread.
+  lastReadMessageId String?
 
-  user      User    @relation(fields: [userId], references: [id])
-  channel   Channel @relation(fields: [channelId], references: [id])
+  user              User     @relation(fields: [userId], references: [id])
+  channel           Channel  @relation(fields: [channelId], references: [id])
+  lastReadMessage   Message? @relation("LastRead", fields: [lastReadMessageId], references: [id], onDelete: SetNull)
 
   @@unique([userId, channelId])
+  // The unique index leads with userId, so it cannot serve "everyone in this channel".
+  @@index([channelId])
 }
 
 model Message {
-  id        String   @id @default(cuid())
-  content   String
-  senderId  String
-  channelId String
-  createdAt DateTime @default(now())
+  id              String   @id @default(cuid())
+  content         String
+  senderId        String
+  channelId       String
+  /// The sender's id for this send. A resend after a lost ack carries the same one and gets the saved row back.
+  clientMessageId String?
+  createdAt       DateTime @default(now())
 
-  sender    User     @relation(fields: [senderId], references: [id])
-  channel   Channel  @relation(fields: [channelId], references: [id])
+  sender          User     @relation(fields: [senderId], references: [id])
+  channel         Channel  @relation(fields: [channelId], references: [id])
+  readBy          ChannelMember[] @relation("LastRead")
+
+  // Postgres treats NULLs as distinct, so sends without a clientMessageId never collide.
+  @@unique([senderId, clientMessageId])
+  // History pages walk one channel by (createdAt, id) in either direction.
+  @@index([channelId, createdAt, id])
 }
 
 model DirectMessage {
@@ -128,6 +143,10 @@ model DirectMessage {
   sender      User      @relation("SentDMs", fields: [senderId], references: [id])
   receiver    User      @relation("ReceivedDMs", fields: [receiverId], references: [id])
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  // A conversation is read as two (sender, receiver) pairs inside one workspace, newest first.
+  @@index([workspaceId, senderId, receiverId, createdAt])
+  @@index([receiverId])
 }
 
 model WorkspaceInvites {
@@ -138,4 +157,6 @@ model WorkspaceInvites {
   expiresAt   DateTime
 
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@index([workspaceId])
 }
