@@ -30,6 +30,7 @@ Server-pushed:
 | --- | --- |
 | `new_message` | A message was saved for a channel this socket is in |
 | `removed_from_channel` | Membership recheck found the user is no longer in the channel |
+| `channel_deleted` | An owner or admin deleted a channel. Sent to every socket of every member, joined to that channel or not |
 
 ## How a send lands
 
@@ -58,10 +59,11 @@ Process-local, in `apps/server/src/socket/state.ts`. That is why Redis exists.
 | set and healthy | Publish to Redis. Every process, including the publisher, delivers once via its subscriber |
 | set but down | Warn, then deliver inside this process. The API does not crash |
 
-Two event kinds:
+Three event kinds:
 
 - `channel_frame`: deliver a JSON frame to sockets in that channel
 - `revoke_sessions`: close those sockets with 4401 on every process
+- `channel_deleted`: drop the channel's room and send `channel_deleted` to the listed members' sockets
 
 The same Redis client holds rate-limit counters (`huddle:rl:*`). If Redis is gone, each process counts in memory.
 

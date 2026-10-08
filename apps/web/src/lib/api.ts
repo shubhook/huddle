@@ -112,6 +112,32 @@ export async function createChannel(
     return res.data.data;
 }
 
+export interface ChannelMember {
+    id: string;
+    username: string;
+    avatarId: string | null;
+    /** Workspace role: "owner", "admin" or "member". */
+    role: string;
+}
+
+export interface ChannelDetails {
+    id: string;
+    name: string;
+    workspaceId: string;
+    createdAt: string;
+    members: ChannelMember[];
+}
+
+export async function getChannelDetails(channelId: string): Promise<ChannelDetails> {
+    const res = await axios.get(`${API_URL}/channels/${channelId}`, { withCredentials: true });
+    return res.data.data;
+}
+
+/** Owners and admins only. Members get a channel_deleted frame over the socket. */
+export async function deleteChannel(channelId: string): Promise<void> {
+    await axios.delete(`${API_URL}/channels/${channelId}`, { withCredentials: true });
+}
+
 export async function sendMessage(channelId: string, content: string) {
     const res = await axios.post(
       `${API_URL}/channel/${channelId}/messages`,

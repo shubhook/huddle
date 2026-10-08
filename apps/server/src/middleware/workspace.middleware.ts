@@ -40,14 +40,14 @@ export async function workspaceAuth(req: Request, res: Response, next: NextFunct
 
 /**
  * Use after workspaceAuth, which sets req.userRole.
- * Roles are "owner" and "member". Anything that grants access to the workspace itself,
+ * Roles are "owner", "admin" and "member". Anything that grants access to the workspace itself,
  * such as an invite, should not be open to every member.
  */
 export function requireWorkspaceRole(...allowed: string[]) {
     return (req: Request, res: Response, next: NextFunction) => {
         if (!allowed.includes(req.userRole)) {
             res.status(403).json({
-                message: "Only a workspace owner can do that."
+                message: `Only a workspace ${allowed.join(" or ")} can do that.`
             });
             return;
         }

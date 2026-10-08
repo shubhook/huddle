@@ -25,6 +25,7 @@ export type IncomingMessage =
       clientMessageId?: string;
     }
   | { type: "removed_from_channel"; channelId: string }
+  | { type: "channel_deleted"; channelId: string }
   | {
       type: "error";
       code?: string;

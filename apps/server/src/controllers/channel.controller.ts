@@ -3,6 +3,7 @@ import { message_schema, new_channel_schema } from "../types/request.schema";
 import { prisma } from "../db";
 import { ChannelAccessError } from "../services/channel-access";
 import { sendChannelMessage } from "../services/message.service";
+import { publishEvent } from "../socket/bus";
 
 export async function createChannel(req: Request, res: Response) {
     const parsedBody = new_channel_schema.safeParse(req.body);
@@ -94,6 +95,94 @@ export async function getAllChannels(req: Request, res: Response) {
             message: "Failed to fetch channels. Please try again.",
         });
         return;
+    }
+}
+
+/** Name, creation date and members, for the channel details panel. Runs after channelAuth. */
+export async function getChannelDetails(req: Request, res: Response) {
+    const channelId = req.params.id as string;
+
+    const channel = await prisma.channel.findUnique({
+        where: { id: channelId },
+        select: {
+            id: true,
+            name: true,
+            workspaceId: true,
+            createdAt: true,
+            members: {
+                select: { user: { select: { id: true, username: true, avatarId: true } } },
+                orderBy: { user: { username: "asc" } },
+            },
+        },
+    });
+
+    if (!channel) {
+        res.status(404).json({ message: "Channel not found" });
+        return;
+    }
+
+    // The role lives on the workspace membership, so look it up for everyone listed.
+    const roles = await prisma.workspaceMember.findMany({
+        where: {
+            workspaceId: channel.workspaceId,
+            userId: { in: channel.members.map((member) => member.user.id) },
+        },
+        select: { userId: true, role: true },
+    });
+    const roleByUser = new Map(roles.map((row) => [row.userId, row.role]));
+
+    res.status(200).json({
+        data: {
+            id: channel.id,
+            name: channel.name,
+            workspaceId: channel.workspaceId,
+            createdAt: channel.createdAt,
+            members: channel.members.map(({ user }) => ({
+                id: user.id,
+                username: user.username,
+                avatarId: user.avatarId,
+                role: roleByUser.get(user.id) ?? "member",
+            })),
+        },
+    });
+}
+
+/**
+ * Removes the channel with its messages and memberships. Runs after channelAuth and
+ * requireWorkspaceRole, so only an owner or admin of the channel's workspace gets here.
+ */
+export async function deleteChannel(req: Request, res: Response) {
+    const channelId = req.params.id as string;
+
+    try {
+        const memberIds = await prisma.$transaction(async (tx) => {
+            const members = await tx.channelMember.findMany({
+                where: { channelId },
+                select: { userId: true },
+            });
+
+            // Messages and memberships point at the channel without a cascade, so they go first.
+            await tx.message.deleteMany({ where: { channelId } });
+            await tx.channelMember.deleteMany({ where: { channelId } });
+            await tx.channel.delete({ where: { id: channelId } });
+
+            return members.map((member) => member.userId);
+        });
+
+        // Members viewing another channel are not subscribed to this one, so tell them by user.
+        await publishEvent({ kind: "channel_deleted", channelId, userIds: memberIds });
+
+        res.status(200).json({ message: "Channel deleted" });
+    }
+    catch (e) {
+        // Two deletes racing: the second finds nothing left to delete.
+        if ((e as { code?: string }).code === "P2025") {
+            res.status(404).json({ message: "Channel not found" });
+            return;
+        }
+
+        console.error(e);
+        res.status(500).json({ message: "Failed to delete channel. Please try again." });
     }
 }
 
