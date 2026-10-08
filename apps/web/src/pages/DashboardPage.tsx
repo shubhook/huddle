@@ -6,7 +6,6 @@ import { ChatLayout } from "@/components/app/ChatLayout";
 import { Composer, MAX_MESSAGE_LENGTH } from "@/components/app/Composer";
 import { InviteDialog, NewChannelDialog } from "@/components/app/Dialogs";
 import { EmptyChannel } from "@/components/app/EmptyChannel";
-import { shortWhen } from "@/components/app/format";
 import { MessageFeed, type FeedItem } from "@/components/app/MessageFeed";
 import { ProfileView } from "@/components/app/ProfileView";
 import { useTheme } from "@/components/app/useTheme";
@@ -87,6 +86,8 @@ export function DashboardPage({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   /** Channels whose history has been fetched at least once. */
   const [loadedChannels, setLoadedChannels] = useState<ReadonlySet<string>>(new Set());
+  /** Channels with live messages that arrived while they were not open. */
+  const [unread, setUnread] = useState<ReadonlySet<string>>(new Set());
   const [pending, setPending] = useState<PendingSend[]>([]);
   /** Ids of messages this tab sent and the server confirmed. */
   const [delivered, setDelivered] = useState<ReadonlySet<string>>(new Set());
@@ -107,6 +108,8 @@ export function DashboardPage({
   // Usernames seen in this workspace. A new one means someone joined, so the
   // member count is refreshed.
   const knownSenders = useRef(new Set<string>());
+  // The channel on screen right now, read by the long-lived socket listener.
+  const viewingRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!notice) return;
@@ -141,7 +144,7 @@ export function DashboardPage({
   }, []);
 
   // A new workspace starts from a clean slate. History for every channel is
-  // fetched up front so the sidebar can show each channel's latest message.
+  // fetched up front so switching channels is instant.
   useEffect(() => {
     if (!workspaceId) return;
     let cancelled = false;
@@ -149,6 +152,7 @@ export function DashboardPage({
     setChannels([]);
     setMessages([]);
     setLoadedChannels(new Set());
+    setUnread(new Set());
     setActiveChannelId(null);
     setWorkspaceName("");
     setMemberCount(null);
@@ -214,6 +218,12 @@ export function DashboardPage({
               },
             ]),
           );
+          if (
+            payload.senderUsername !== user.username &&
+            payload.channelId !== viewingRef.current
+          ) {
+            setUnread((current) => new Set(current).add(payload.channelId));
+          }
           break;
         }
 
@@ -284,6 +294,19 @@ export function DashboardPage({
     [activeChannelId, channels],
   );
 
+  const viewingId = view === "chat" ? (activeChannel?.id ?? null) : null;
+  viewingRef.current = viewingId;
+
+  useEffect(() => {
+    if (!viewingId) return;
+    setUnread((current) => {
+      if (!current.has(viewingId)) return current;
+      const next = new Set(current);
+      next.delete(viewingId);
+      return next;
+    });
+  }, [viewingId]);
+
   useEffect(() => {
     if (status !== "connected" || !activeChannel) return;
     joinChannel(activeChannel.id, workspaceId);
@@ -292,23 +315,10 @@ export function DashboardPage({
     };
   }, [activeChannel?.id, workspaceId, status]);
 
-  const sidebarChannels: SidebarChannel[] = useMemo(() => {
-    const latest = new Map<string, ChatMessage>();
-    for (const message of messages) latest.set(message.channel, message);
-
-    return channels.map((channel) => {
-      const last = latest.get(channel.id);
-      if (!last) {
-        return {
-          ...channel,
-          preview: loadedChannels.has(channel.id) ? "No messages yet" : "",
-          when: loadedChannels.has(channel.id) ? "—" : "",
-        };
-      }
-      const who = last.sender === user.username ? "you" : last.sender;
-      return { ...channel, preview: `${who}: ${last.content}`, when: shortWhen(last.createdAt) };
-    });
-  }, [channels, messages, loadedChannels, user.username]);
+  const sidebarChannels: SidebarChannel[] = useMemo(
+    () => channels.map((channel) => ({ ...channel, unread: unread.has(channel.id) })),
+    [channels, unread],
+  );
 
   const feedItems: FeedItem[] = useMemo(() => {
     if (!activeChannel) return [];

@@ -136,6 +136,14 @@
     color: #fff;
   }
 
+  .avatar--sm {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: 9.5px;
+    letter-spacing: 0.02em;
+  }
+
   .tone-1 { background: #3b5bdb; }
   .tone-2 { background: #b4552d; }
   .tone-3 { background: #2f8f5b; }
@@ -275,15 +283,13 @@
   }
 
   .chan {
-    display: grid;
-    grid-template-columns: 32px minmax(0, 1fr) auto;
-    grid-template-rows: auto auto;
-    column-gap: 10px;
+    display: flex;
+    gap: 10px;
     align-items: center;
     width: 100%;
-    padding: 9px 10px;
+    padding: 5px 8px;
     border: 0;
-    border-radius: 11px;
+    border-radius: 9px;
     background: transparent;
     text-align: left;
     color: var(--panel-copy);
@@ -299,16 +305,17 @@
   }
 
   .chan__icon {
-    grid-row: span 2;
+    position: relative;
     display: grid;
+    flex: none;
     place-items: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
     background: var(--panel-3);
     border: 1px solid var(--panel-line-2);
     font-family: var(--font-mono);
-    font-size: 14px;
+    font-size: 12px;
     color: var(--panel-muted);
   }
 
@@ -318,24 +325,21 @@
     border-color: var(--wash-line);
   }
 
+  .chan__dot {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--blue-top);
+    box-shadow: 0 0 0 2px var(--panel-2);
+  }
+
   .chan__name {
+    min-width: 0;
     font-size: 14px;
     font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .chan__time {
-    font-size: 11.5px;
-    color: var(--panel-muted-2);
-  }
-
-  .chan__preview {
-    grid-column: 2 / -1;
-    min-height: 1.4em;
-    font-size: 12.5px;
-    color: var(--panel-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -550,9 +554,6 @@
 
   .msg {
     position: relative;
-    display: grid;
-    grid-template-columns: 32px minmax(0, 1fr);
-    column-gap: 12px;
     padding: 8px 10px;
     margin: 0 -10px;
     border-radius: 12px;
@@ -566,14 +567,9 @@
     padding-top: 2px;
   }
 
-  .msg--cont .avatar {
-    visibility: hidden;
-    height: 0;
-  }
-
   .msg__meta {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 8px;
     margin-bottom: 2px;
   }
@@ -590,6 +586,7 @@
   }
 
   .msg__text {
+    padding-left: 30px;
     font-size: 14.5px;
     line-height: 1.6;
     color: var(--panel-copy);
