@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { messageContent } from "../types/request.schema";
+import { clientMessageId, messageContent } from "../types/request.schema";
 
 const id = z.string().min(1).max(64);
 
@@ -20,7 +20,7 @@ export const clientFrameSchema = z.discriminatedUnion("type", [
             workspaceId: id,
             content: messageContent,
             /** Echoed back in the ack or error so the client can match them to a send. */
-            clientMessageId: id.optional(),
+            clientMessageId: clientMessageId.optional(),
         }),
     }),
     z.object({ type: z.literal("send_direct_message"), payload: z.unknown() }),

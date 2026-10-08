@@ -7,11 +7,22 @@ import { AUTH_COOKIE } from "../utils/cookies";
 import { isAllowedOrigin } from "../utils/origin";
 import { isTokenError, verifyToken } from "../utils/token";
 import { findActiveSession, SessionInactiveError } from "../services/session.service";
+import { accessibleChannelPairs } from "../services/channel-access";
 import { onBusEvent, startBus } from "./bus";
 import { handleJoinChannel, handleLeaveChannel, handleSendMessage, handleSendDirectMessage, handleLeaveDirectMessage } from "./handlers";
 import { startMaintenance } from "./maintenance";
 import { clientFrameSchema, MAX_FRAME_BYTES, type ClientFrame } from "./schema";
-import { cleanupSocket, closeSocketsForSessions, deliverChannelDeleted, deliverToChannel, registerSocket, sendError } from "./state";
+import {
+    cleanupSocket,
+    closeSocketsForSessions,
+    deliverChannelDeleted,
+    deliverChannelsJoined,
+    deliverToChannel,
+    registerSocket,
+    sendError,
+    socketCountForUser,
+    subscribeSocket,
+} from "./state";
 import { CLOSE_SESSION_ENDED, type AuthenticatedWebSocket } from "./types";
 
 const parseCookies = (cookieString: string) =>
@@ -72,6 +83,21 @@ const MAX_TIMER_MS = 2 ** 31 - 1;
 
 /** The most frames one socket may have waiting. A client that sends faster than we work gets errors. */
 const MAX_PENDING_FRAMES = 50;
+
+/**
+ * Open sockets one user may hold on this process. Each tab holds one. Every socket is
+ * subscribed to all of the user's channels, so an unbounded pile multiplies fan-out.
+ */
+const MAX_SOCKETS_PER_USER = 10;
+
+/**
+ * Every socket receives every channel the user belongs to, so unread markers light up
+ * for channels that are not open. Runs on the socket's queue, ahead of any frame it sends.
+ */
+async function subscribeToMemberChannels(ws: AuthenticatedWebSocket) {
+    const pairs = await accessibleChannelPairs([ws.userId]);
+    subscribeSocket(ws, pairs.map((pair) => pair.channelId), "subscribed");
+}
 
 function rawToString(data: RawData): string {
     if (Array.isArray(data)) return Buffer.concat(data).toString();
@@ -172,6 +198,7 @@ export function setupWebSocket(app: Express) {
         if (event.kind === "channel_frame") deliverToChannel(event.channelId, event.frame);
         else if (event.kind === "revoke_sessions") closeSocketsForSessions(event.sessionIds);
         else if (event.kind === "channel_deleted") deliverChannelDeleted(event.channelId, event.userIds);
+        else if (event.kind === "channels_joined") deliverChannelsJoined(event.userIds, event.channelIds);
     });
     void startBus();
     startMaintenance(wss);
@@ -193,6 +220,13 @@ export function setupWebSocket(app: Express) {
 
             // The client may have hung up while the session lookup ran.
             if (socket.destroyed) return;
+
+            // Counted and registered without an await in between, so parallel upgrades cannot all slip past.
+            if (socketCountForUser(session.userId) >= MAX_SOCKETS_PER_USER) {
+                console.warn(`Rejected websocket upgrade: user ${session.userId} has too many open sockets`);
+                rejectUpgrade(socket, "429 Too Many Requests");
+                return;
+            }
 
             wss.handleUpgrade(req, socket, head, (ws) => {
                 const authed = ws as AuthenticatedWebSocket;
@@ -231,6 +265,17 @@ export function setupWebSocket(app: Express) {
         console.log(`User ${ws.userId} connected from ${req.socket.remoteAddress}`);
 
         registerSocket(ws);
+
+        ws.pending++;
+        ws.queue = ws.queue
+            .then(() => subscribeToMemberChannels(ws))
+            .catch((err) => {
+                console.error("initial subscribe failed", err);
+                sendError(ws, "internal_error", "Could not subscribe to your channels, reconnect to retry");
+            })
+            .finally(() => {
+                ws.pending--;
+            });
 
         ws.on("pong", () => {
             ws.isAlive = true;

@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { new_workspace_schema } from "../types/request.schema";
 import { prisma } from "../db";
 import crypto from "crypto";
-import { channelAuth } from "../middleware/channel.middleware";
+import { publishEvent } from "../socket/bus";
 
 class WorkspaceNotFoundError extends Error {
     constructor(workspaceId: string) {
@@ -51,8 +51,10 @@ export async function createWorkspace(req: Request, res: Response) {
                 }
             });
 
-            return createdWorkspace;
+            return { ...createdWorkspace, generalChannelId: generalChannel.id };
         });
+
+        await publishEvent({ kind: "channels_joined", userIds: [req.userId], channelIds: [workspace.generalChannelId] });
 
         res.status(201).json({
             message: `Workspace "${parsedBody.data.name}" created successfully`,
@@ -248,8 +250,10 @@ export async function joinWorkspace(req: Request, res: Response) {
                 }))
             })
 
-            return workspaceMember;
+            return { ...workspaceMember, channelIds: channels.map((channel) => channel.id) };
         })
+
+        await publishEvent({ kind: "channels_joined", userIds: [userId], channelIds: workspace.channelIds });
 
         res.status(201).json({ message: `Joined workspace`, workspaceId: workspace.workspaceId });
     }
@@ -297,10 +301,29 @@ export async function getWorkspaceDetails(req: Request, res: Response) {
                 }
             });
 
+            // A channel is unread when someone else posted after the caller's read marker.
+            // Each EXISTS is one probe of the (channelId, createdAt, id) index. Keep the
+            // comparison a single row comparison: an "IS NULL OR" around it stops Postgres
+            // using it as an index bound, and every channel then scans its whole history.
+            const unread = await tx.$queryRaw<{ channelId: string }[]>`
+                SELECT cm."channelId"
+                FROM "ChannelMember" AS cm
+                JOIN "Channel" AS c ON c."id" = cm."channelId"
+                LEFT JOIN "Message" AS r ON r."id" = cm."lastReadMessageId"
+                WHERE cm."userId" = ${req.userId}
+                  AND c."workspaceId" = ${workspaceId}
+                  AND EXISTS (
+                      SELECT 1 FROM "Message" AS m
+                      WHERE m."channelId" = cm."channelId"
+                        AND m."senderId" <> ${req.userId}
+                        AND (m."createdAt", m."id") > (COALESCE(r."createdAt", '-infinity'), COALESCE(r."id", ''))
+                  )`;
+
             return {
                 general,
                 channels,
                 members,
+                unreadChannelIds: unread.map((row) => row.channelId),
             };
         })
 

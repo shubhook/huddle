@@ -22,6 +22,8 @@ export interface WorkspaceSnapshot {
   channels: { id: string; name: string }[];
   activeChannelId: string | null;
   messages: ChatMessage[];
+  /** Absent in entries written before unread state was cached. */
+  unreadChannelIds?: string[];
 }
 
 function read<T>(key: string): T | null {

@@ -42,11 +42,12 @@ The production build must pass `env: "BUN_PUBLIC_*"` to `Bun.build`. Without it 
 | --- | --- |
 | Load workspace | `GET /workspaces/:id` |
 | Open socket | `connectSocket()` in `lib/ws.ts` |
-| Join room | `join_channel` when status is `connected` |
-| Load history | `GET /channels/:id/messages` after the join ack |
-| Send | `send_message` with a `clientMessageId`. Pending until `send_message_ack` or 10 s |
+| Subscribe | The server subscribes the socket to every channel and sends `subscribed` |
+| Load history | `GET /channels/:id/messages?after=<newest id held>` for each channel after `subscribed`. Older pages load when the feed is scrolled to the top |
+| Send | `send_message` with a `clientMessageId`. Pending until acked or 10 s. Resent under the same id after a reconnect |
+| Unread | Seeded from `unreadChannelIds`, set by live messages, cleared on open. `PUT /channels/:id/read` moves the server's marker |
 
-Incoming `new_message` and REST history merge by id, newest copy wins, sorted by `createdAt`. The composer still accepts input when the socket is down. The send just does not leave the machine.
+Incoming `new_message` and REST history merge by id, newest copy wins, sorted by `createdAt` then id. The composer still accepts input when the socket is down. The send just does not leave the machine.
 
 Connection status is the badge in the sidebar (`connecting` / `connected` / `disconnected`). Close code 4401, or a reconnect that gets 401 from `/auth/me`, clears the session and the app sends you to sign-in.
 

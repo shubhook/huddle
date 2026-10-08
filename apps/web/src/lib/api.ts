@@ -143,14 +143,24 @@ export async function deleteChannel(channelId: string): Promise<void> {
     await axios.delete(`${API_URL}/channels/${channelId}`, { withCredentials: true });
 }
 
-export async function sendMessage(channelId: string, content: string) {
+/** Pass the same clientMessageId when retrying, and the server returns the saved message instead of a copy. */
+export async function sendMessage(channelId: string, content: string, clientMessageId?: string) {
     const res = await axios.post(
-      `${API_URL}/channel/${channelId}/messages`,
-      { content },
+      `${API_URL}/channels/${channelId}/messages`,
+      { content, clientMessageId },
       { withCredentials: true }
     );
     return res.data;
   }
+
+/** Moves the read marker forward. The server ignores a message older than the current one. */
+export async function markChannelRead(channelId: string, messageId: string): Promise<void> {
+    await axios.put(
+      `${API_URL}/channels/${channelId}/read`,
+      { messageId },
+      { withCredentials: true }
+    );
+}
 
   export interface WorkspaceDetails {
     general: {
@@ -169,6 +179,8 @@ export async function sendMessage(channelId: string, content: string) {
       workspaceId: string;
       role: string;
     }[];
+    /** Channels with messages from others after the caller's read marker. */
+    unreadChannelIds: string[];
   }
   
   export interface CurrentUser {
@@ -194,15 +206,27 @@ export interface ChannelMessage {
     senderId: string;
     channelId: string;
     createdAt: string;
+    clientMessageId: string | null;
     sender: { username: string; avatarId: string | null };
 }
 
-export async function getMessages(channelId: string): Promise<ChannelMessage[]> {
+export interface MessagePage {
+    /** Newest first for the latest page and `before`, oldest first for `after`. */
+    messages: ChannelMessage[];
+    /** True when another page exists in the same direction. */
+    hasMore: boolean;
+}
+
+/** The newest page, or the page older (`before`) or newer (`after`) than a message id. */
+export async function getMessages(
+    channelId: string,
+    page: { before?: string; after?: string } = {},
+): Promise<MessagePage> {
     const res = await axios.get(
       `${API_URL}/channels/${channelId}/messages`,
-      { withCredentials: true }
+      { params: page, withCredentials: true }
     );
-    return res.data.batchMessage;
+    return { messages: res.data.batchMessage, hasMore: res.data.hasMore };
 }
 
 export async function getWorkspace(workspaceId: string): Promise<WorkspaceDetails> {

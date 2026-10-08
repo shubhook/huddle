@@ -48,10 +48,13 @@ Signup body: `{ username, email, password }`. Sign-in body: `{ email, password }
 | GET | `/workspaces/:id/channels` | |
 | GET | `/channels/:id` | Name, `createdAt`, members with their workspace role |
 | DELETE | `/channels/:id` | Owner or admin. Removes the channel and its messages, then sends `channel_deleted` to every member |
-| GET | `/channels/:id/messages` | Newest 50. `?cursor=<messageId>` for the next page |
-| POST | `/channel/:id/messages` | Singular. `{ content }`. Fans out over the socket |
+| GET | `/channels/:id/messages` | Pages of 50, ordered by `(createdAt, id)`. No cursor: newest first. `?before=<messageId>`: the page older than it, newest first (`?cursor=` is the old name). `?after=<messageId>`: the page newer than it, oldest first. Returns `{ batchMessage, nextCursor, hasMore }`. Keep passing `nextCursor` the same way while `hasMore` |
+| POST | `/channels/:id/messages` | `{ content, clientMessageId? }`. Fans out over the socket. Repeating a `clientMessageId` returns the saved message, no second copy. Shares the send limit with the socket |
+| PUT | `/channels/:id/read` | `{ messageId }`. Moves the caller's read marker forward, never back. 120 / min / user |
 
-The singular/plural split on send vs history is real. The web UI uses the socket for send and REST for history.
+`GET /workspaces/:id` also returns `unreadChannelIds`: channels where someone else posted after the caller's read marker.
+
+The web UI uses the socket for send and REST for history.
 
 ## Direct messages
 

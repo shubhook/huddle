@@ -644,6 +644,24 @@
     padding: 0 24px;
   }
 
+  .feed__older {
+    display: block;
+    margin: 8px auto 0;
+    border: 0;
+    background: none;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--panel-muted-2);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .feed__older:disabled {
+    text-decoration: none;
+  }
+
   .day {
     display: flex;
     align-items: center;

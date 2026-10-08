@@ -51,18 +51,51 @@ interface MessageFeedProps {
   scrollKey?: string;
   /** Shown instead of the list when there are no items. */
   empty?: ReactNode;
+  /** Older messages exist on the server. Shows a control at the top and loads them near the top. */
+  hasOlder?: boolean;
+  loadingOlder?: boolean;
+  onLoadOlder?: () => void;
 }
 
-export function MessageFeed({ items, scrollKey, empty }: MessageFeedProps) {
+/** How close to the top, in pixels, scrolling has to get before older messages load. */
+const LOAD_OLDER_WITHIN_PX = 200;
+
+export function MessageFeed({
+  items,
+  scrollKey,
+  empty,
+  hasOlder,
+  loadingOlder,
+  onLoadOlder,
+}: MessageFeedProps) {
   const feedRef = useRef<HTMLDivElement>(null);
   const nearBottom = useRef(true);
   const last = items[items.length - 1];
+  const firstId = items[0]?.id;
+  // Height and first row after the last render, to tell when rows were added above.
+  const anchor = useRef<{ key?: string; firstId?: string; height: number }>({ height: 0 });
 
   useLayoutEffect(() => {
     const feed = feedRef.current;
     if (feed) feed.scrollTop = feed.scrollHeight;
     nearBottom.current = true;
   }, [scrollKey]);
+
+  // Older messages went in above: keep the rows on screen where they were.
+  useLayoutEffect(() => {
+    const feed = feedRef.current;
+    if (!feed) return;
+    const previous = anchor.current;
+    if (
+      previous.key === scrollKey &&
+      previous.firstId !== undefined &&
+      previous.firstId !== firstId &&
+      !nearBottom.current
+    ) {
+      feed.scrollTop += feed.scrollHeight - previous.height;
+    }
+    anchor.current = { key: scrollKey, firstId, height: feed.scrollHeight };
+  });
 
   // Follow new messages only if the reader is already at the bottom,
   // or the newest message is one they just sent.
@@ -82,12 +115,23 @@ export function MessageFeed({ items, scrollKey, empty }: MessageFeedProps) {
       onScroll={(event) => {
         const el = event.currentTarget;
         nearBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+        if (hasOlder && !loadingOlder && el.scrollTop < LOAD_OLDER_WITHIN_PX) onLoadOlder?.();
       }}
     >
       {items.length === 0 && empty ? (
         empty
       ) : (
         <div className="feed__inner">
+          {hasOlder && onLoadOlder && (
+            <button
+              type="button"
+              className="feed__older"
+              disabled={loadingOlder}
+              onClick={onLoadOlder}
+            >
+              {loadingOlder ? "Loading older messages…" : "Load older messages"}
+            </button>
+          )}
           {items.map((item, index) => {
             const previous = items[index - 1];
             const newDay = !previous || !sameDay(previous.createdAt, item.createdAt);

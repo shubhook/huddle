@@ -38,7 +38,7 @@ There is no shared package. Types are duplicated where the client needs them.
 1. `POST /auth/signin` sets `jwt_token` and a `Session` row.
 2. The SPA goes to `#/app`, then `GET /workspaces` and `GET /workspaces/:id`.
 3. `connectSocket()` opens `ws://localhost:3000`. The upgrade checks Origin, then the cookie, then the Session row.
-4. The client sends `join_channel`, then `GET /channels/:id/messages`. Join first, so nothing sent after the join is missed. Live and fetched messages are merged by id.
+4. The server subscribes the socket to all of the user's channels and sends `subscribed`. The client then fetches `GET /channels/:id/messages?after=<newest id it has>` per channel. Subscribe first, so nothing sent after it is missed. Live and fetched messages are merged by id.
 5. A send is `send_message` with a `clientMessageId`. The server saves the row, publishes on the bus, and replies `send_message_ack`.
 
 Details: [auth](./auth.md), [workspaces](./workspaces.md), [realtime](./realtime.md), [web](./web.md).
@@ -52,8 +52,8 @@ Prisma schema lives in `apps/server/prisma/schema.prisma`. The important tables:
 | `User` | Email / username / optional password / optional `githubId` |
 | `Session` | One row per login. The JWT carries its id as `sid` |
 | `Workspace` / `WorkspaceMember` | Membership and role (`owner` or `member`) |
-| `Channel` / `ChannelMember` | A channel and who is in it |
-| `Message` | Channel history |
+| `Channel` / `ChannelMember` | A channel, who is in it, and each member's read marker (`lastReadMessageId`) |
+| `Message` | Channel history. Indexed on `(channelId, createdAt, id)` for paging. Unique `(senderId, clientMessageId)` makes sends idempotent |
 | `WorkspaceInvites` | Token, expiry, who created it |
 | `DirectMessage` | REST only. The socket does not carry these |
 

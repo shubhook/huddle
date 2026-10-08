@@ -57,3 +57,28 @@ export async function assertChannelAccess(
 
     return { channel, role: workspaceMember.role };
 }
+
+/**
+ * Every (user, channel) pair the same rule allows: a channel member who is also in the
+ * channel's workspace. Sockets subscribe to all of these at connect, and the periodic
+ * recheck drops anything that falls out of it.
+ */
+export async function accessibleChannelPairs(userIds: string[]) {
+    if (userIds.length === 0) return [];
+
+    const [channelRows, workspaceRows] = await Promise.all([
+        prisma.channelMember.findMany({
+            where: { userId: { in: userIds } },
+            select: { userId: true, channelId: true, channel: { select: { workspaceId: true } } },
+        }),
+        prisma.workspaceMember.findMany({
+            where: { userId: { in: userIds } },
+            select: { userId: true, workspaceId: true },
+        }),
+    ]);
+
+    const inWorkspace = new Set(workspaceRows.map((row) => `${row.userId}:${row.workspaceId}`));
+    return channelRows
+        .filter((row) => inWorkspace.has(`${row.userId}:${row.channel.workspaceId}`))
+        .map(({ userId, channelId }) => ({ userId, channelId }));
+}

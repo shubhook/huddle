@@ -10,7 +10,9 @@ import { env } from "../utils/env";
 export type BusEvent =
     | { kind: "channel_frame"; channelId: string; frame: unknown }
     | { kind: "revoke_sessions"; sessionIds: string[] }
-    | { kind: "channel_deleted"; channelId: string; userIds: string[] };
+    | { kind: "channel_deleted"; channelId: string; userIds: string[] }
+    /** These users became members of these channels. Their open sockets subscribe to them. */
+    | { kind: "channels_joined"; userIds: string[]; channelIds: string[] };
 
 type BusHandler = (event: BusEvent) => void;
 type RedisClient = ReturnType<typeof createClient>;
