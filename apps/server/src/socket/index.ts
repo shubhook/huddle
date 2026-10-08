@@ -11,7 +11,7 @@ import { onBusEvent, startBus } from "./bus";
 import { handleJoinChannel, handleLeaveChannel, handleSendMessage, handleSendDirectMessage, handleLeaveDirectMessage } from "./handlers";
 import { startMaintenance } from "./maintenance";
 import { clientFrameSchema, MAX_FRAME_BYTES, type ClientFrame } from "./schema";
-import { cleanupSocket, closeSocketsForSessions, deliverToChannel, registerSocket, sendError } from "./state";
+import { cleanupSocket, closeSocketsForSessions, deliverChannelDeleted, deliverToChannel, registerSocket, sendError } from "./state";
 import { CLOSE_SESSION_ENDED, type AuthenticatedWebSocket } from "./types";
 
 const parseCookies = (cookieString: string) =>
@@ -171,6 +171,7 @@ export function setupWebSocket(app: Express) {
     onBusEvent((event) => {
         if (event.kind === "channel_frame") deliverToChannel(event.channelId, event.frame);
         else if (event.kind === "revoke_sessions") closeSocketsForSessions(event.sessionIds);
+        else if (event.kind === "channel_deleted") deliverChannelDeleted(event.channelId, event.userIds);
     });
     void startBus();
     startMaintenance(wss);

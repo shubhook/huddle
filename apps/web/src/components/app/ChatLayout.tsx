@@ -12,6 +12,8 @@ interface ChatLayoutProps {
   onCloseDrawer?: () => void;
   rail?: ReactNode;
   sidebar: ReactNode;
+  /** Right-hand channel details panel. Shown over the conversation on narrower screens. */
+  details?: ReactNode;
   children: ReactNode;
   /** Dialogs, rendered over the whole app. */
   overlay?: ReactNode;
@@ -24,6 +26,7 @@ export function ChatLayout({
   onCloseDrawer,
   rail,
   sidebar,
+  details,
   children,
   overlay,
 }: ChatLayoutProps) {
@@ -34,10 +37,12 @@ export function ChatLayout({
         data-theme={theme}
         data-embed={embed ? "" : undefined}
         data-drawer={drawerOpen ? "" : undefined}
+        data-details={details ? "" : undefined}
       >
         {rail}
         {sidebar}
         <main className="main">{children}</main>
+        {details}
         <div className="scrim" onClick={onCloseDrawer} aria-hidden />
         {overlay}
       </div>

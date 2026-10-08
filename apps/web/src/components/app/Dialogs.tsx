@@ -126,3 +126,52 @@ export function InviteDialog({ workspaceName, url, error, onClose }: InviteDialo
     </Modal>
   );
 }
+
+interface DeleteChannelDialogProps {
+  channelName: string;
+  /** Resolve false to keep the dialog open, e.g. when the server refused. */
+  onConfirm: () => Promise<boolean> | boolean;
+  onClose: () => void;
+  error?: string;
+}
+
+export function DeleteChannelDialog({
+  channelName,
+  onConfirm,
+  onClose,
+  error,
+}: DeleteChannelDialogProps) {
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <Modal labelledBy="delete-channel-title" onClose={onClose}>
+      <h2 id="delete-channel-title">Delete #{channelName}?</h2>
+      <p>
+        The channel and all of its messages are removed for everyone. This cannot be
+        undone.
+      </p>
+      {error && <p className="modal__error" role="alert">{error}</p>}
+      <div className="modal__actions">
+        <button type="button" className="btn btn--ghost btn--sm" onClick={onClose} autoFocus>
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="btn btn--danger btn--sm"
+          disabled={busy}
+          onClick={async () => {
+            if (busy) return;
+            setBusy(true);
+            try {
+              if ((await onConfirm()) !== false) onClose();
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? "Deleting…" : "Delete channel"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
