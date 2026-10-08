@@ -27,6 +27,11 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+/** True when the server refused the session, as opposed to being unreachable or failing. */
+export function isUnauthorized(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 401;
+}
+
 /** Full-page redirect URL for GitHub OAuth (server sets state cookie + redirects). */
 export function getGithubAuthUrl(): string {
     return `${API_URL}/auth/github`;

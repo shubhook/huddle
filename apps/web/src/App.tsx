@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { AppShell } from "@/components/app/AppShell";
 import {
   inviteCodeFromHash,
   navigateTo,
@@ -18,6 +19,7 @@ import {
   type CurrentUser,
   getApiErrorMessage,
   getCurrentUser,
+  isUnauthorized,
   joinWorkspace,
   listWorkspaces,
   logout,
@@ -25,6 +27,13 @@ import {
   signup,
   type WorkspaceSummary,
 } from "./lib/api";
+import {
+  cachedUser,
+  cachedWorkspaces,
+  cacheUser,
+  cacheWorkspaces,
+  clearCache,
+} from "./lib/cache";
 import { onSessionEnded } from "./lib/ws";
 
 /** What the server means by each code it puts in #/signin/<code> after a GitHub attempt. */
@@ -62,22 +71,42 @@ export function App() {
   const route = useHashRoute();
   const authNotice = useHashAuthNotice();
   const workspaceId = useHashWorkspaceId();
-  const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
+  // Start from what the last visit saw, so a returning user lands in the app
+  // at once. The session check below confirms or replaces it.
+  const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>(cachedWorkspaces);
   const [signinError, setSigninError] = useState<string | undefined>();
   const [signupError, setSignupError] = useState<string | undefined>();
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(cachedUser);
   const [sessionChecked, setSessionChecked] = useState(false);
 
   useEffect(() => {
     getCurrentUser()
       .then(setCurrentUser)
-      .catch(() => setCurrentUser(null))
+      .catch((error) => {
+        // Only a refused session signs the user out. When the server is
+        // unreachable a cached user stays on screen and the socket shows offline.
+        if (isUnauthorized(error)) {
+          clearCache();
+          setCurrentUser(null);
+        }
+      })
       .finally(() => setSessionChecked(true));
   }, []);
 
+  useEffect(() => {
+    if (currentUser) cacheUser(currentUser);
+  }, [currentUser]);
+
   // The server ends a socket when its session expires or the user signs out
   // elsewhere. Dropping the user here sends them to sign-in via the effect below.
-  useEffect(() => onSessionEnded(() => setCurrentUser(null)), []);
+  useEffect(
+    () =>
+      onSessionEnded(() => {
+        clearCache();
+        setCurrentUser(null);
+      }),
+    [],
+  );
 
   useEffect(() => {
     if (route === "/signin" && authNotice) {
@@ -109,10 +138,18 @@ export function App() {
     if (route !== "/app" || !currentUser) return;
     let cancelled = false;
 
+    // Open the last known workspace now rather than after the list arrives.
+    const known = cachedWorkspaces()[0];
+    if (!workspaceId && known) {
+      navigateTo("/app", { workspaceId: known.id, replace: true });
+      return;
+    }
+
     listWorkspaces()
       .then((list) => {
         if (cancelled) return;
         setWorkspaces(list);
+        cacheWorkspaces(list);
         if (list.some((workspace) => workspace.id === workspaceId)) return;
 
         const fallback = list[0];
@@ -204,7 +241,9 @@ export function App() {
   }
 
   if (route === "/app") {
-    if (!sessionChecked || !currentUser || !workspaceId) return null;
+    // The outline of the app, not a blank page, while the session or the
+    // workspace to open is still being worked out.
+    if (!currentUser || !workspaceId) return <AppShell />;
 
     return (
       <DashboardPage
@@ -221,6 +260,7 @@ export function App() {
           try {
             await logout();
           } finally {
+            clearCache();
             setCurrentUser(null);
             navigateTo("/signin");
           }

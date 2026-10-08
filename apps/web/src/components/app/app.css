@@ -17,8 +17,13 @@
 
 @media (prefers-reduced-motion: reduce) {
   .skel__bone,
-  .presence__dot {
+  .presence__dot,
+  .chan.is-pending {
     animation: none !important;
+  }
+
+  .app :is(.chan, .icon-btn, .rail__ws, .send):active {
+    transform: none !important;
   }
 
   .presence,
@@ -326,6 +331,29 @@
   .chan.is-active {
     background: var(--panel-4);
     box-shadow: inset 0 0 0 1px var(--panel-line-2);
+  }
+
+  /* Created optimistically. Fades until the server confirms it. */
+  .chan.is-pending {
+    animation: app-pulse 1.4s ease-in-out infinite;
+  }
+
+  /*
+   * Answer the press itself, before any request finishes. touch-action drops
+   * the double-tap-to-zoom wait some mobile browsers add before a click.
+   */
+  button {
+    touch-action: manipulation;
+  }
+
+  :is(.chan, .icon-btn, .rail__ws, .send) {
+    transition-property: background, color, border-radius, transform;
+    transition-duration: 0.15s, 0.15s, 0.2s, 0.08s;
+    transition-timing-function: ease;
+  }
+
+  :is(.chan, .icon-btn, .rail__ws, .send):active {
+    transform: scale(0.96);
   }
 
   .chan__icon {
@@ -906,6 +934,18 @@
   .skel__bone--line {
     height: 12px;
     margin-left: 30px;
+  }
+
+  .skel__bone--tile {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+
+  /* Channel list placeholder in the loading shell */
+  .skel--side {
+    gap: 16px;
+    padding: 18px 18px 0;
   }
 
   .loading {
