@@ -214,6 +214,9 @@ export function App() {
         workspaceId={workspaceId}
         onSelectWorkspace={(id) => navigateTo("/app", { workspaceId: id })}
         onCreateWorkspace={() => navigateTo("/workspace/create")}
+        onAvatarChange={(avatarId) =>
+          setCurrentUser((current) => (current ? { ...current, avatarId } : current))
+        }
         onLogout={async () => {
           try {
             await logout();

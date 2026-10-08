@@ -257,7 +257,7 @@ export function LiveDemo() {
           }))}
           activeId={view === "chat" ? active.id : undefined}
           username={ME}
-          connected
+          presence="online"
           statusLabel="Connected"
           onSelect={select}
           onInvite={() => openDialog("invite")}

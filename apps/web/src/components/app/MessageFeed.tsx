@@ -17,6 +17,8 @@ export type FeedItem =
       /** Rich body for the landing demo. Falls back to `text`. */
       body?: ReactNode;
       tone?: number;
+      /** Profile picture URL, if the sender has one. */
+      avatarUrl?: string;
       /** Only set for messages this tab sent. */
       delivery?: Delivery;
     }
@@ -126,7 +128,7 @@ function MessageRow({
     <div className={classes.join(" ")}>
       {!grouped && (
         <div className="msg__meta">
-          <Avatar name={item.sender} tone={item.tone} small />
+          <Avatar name={item.sender} tone={item.tone} src={item.avatarUrl} small />
           <span className="msg__name">{item.sender}</span>
           <span className="msg__time">{clockTime(item.createdAt)}</span>
           {item.delivery && (
@@ -138,6 +140,41 @@ function MessageRow({
         </div>
       )}
       <div className="msg__text">{item.body ?? <p>{item.text}</p>}</div>
+    </div>
+  );
+}
+
+/** Name width, then one entry per text line, in percent. Fixed so it does not jump around. */
+const SKELETON_ROWS: { name: number; lines: number[] }[] = [
+  { name: 72, lines: [62] },
+  { name: 96, lines: [88, 54] },
+  { name: 64, lines: [40] },
+  { name: 84, lines: [76, 92, 30] },
+  { name: 70, lines: [58] },
+];
+
+/** Stand-in for a channel's messages while its history loads. */
+export function MessageSkeleton({ label }: { label: string }) {
+  return (
+    <div className="feed" role="status" aria-label={label}>
+      <div className="feed__inner skel" aria-hidden>
+        {SKELETON_ROWS.map((row, index) => (
+          <div className="skel__row" key={index}>
+            <div className="skel__meta">
+              <span className="skel__bone skel__bone--avatar" />
+              <span className="skel__bone" style={{ width: row.name }} />
+              <span className="skel__bone" style={{ width: 44, opacity: 0.6 }} />
+            </div>
+            {row.lines.map((width, line) => (
+              <span
+                className="skel__bone skel__bone--line"
+                key={line}
+                style={{ width: `calc(${width}% - 30px)` }}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -1,9 +1,15 @@
+import { useRef, useState } from "react";
+
 import { Avatar } from "@/components/app/Avatar";
 import type { Theme } from "@/components/app/useTheme";
 
 interface ProfileViewProps {
   username: string;
   email: string;
+  avatarUrl?: string;
+  /** Resolves when saved, rejects with a message to show. Omit to hide photo controls. */
+  onAvatarUpload?: (file: File) => Promise<void>;
+  onAvatarRemove?: () => Promise<void>;
   theme: Theme;
   onThemeChange: (theme: Theme) => void;
   workspaceName?: string;
@@ -20,6 +26,9 @@ function roleLabel(role: string): string {
 export function ProfileView({
   username,
   email,
+  avatarUrl,
+  onAvatarUpload,
+  onAvatarRemove,
   theme,
   onThemeChange,
   workspaceName,
@@ -27,11 +36,27 @@ export function ProfileView({
   channelCount,
   onSignOut,
 }: ProfileViewProps) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [photoError, setPhotoError] = useState<string>();
+
+  const run = async (action: () => Promise<void>) => {
+    setBusy(true);
+    setPhotoError(undefined);
+    try {
+      await action();
+    } catch (error) {
+      setPhotoError(error instanceof Error ? error.message : "Could not update your photo.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <section className="profile" aria-label="Profile">
       <div className="profile__in">
         <div className="profile__who">
-          <Avatar name={username} tone={1} />
+          <Avatar name={username} tone={1} src={avatarUrl} />
           <div>
             <h2>{username}</h2>
             <p>{email}</p>
@@ -48,6 +73,47 @@ export function ProfileView({
             <strong>Email</strong>
             <span>{email}</span>
           </div>
+          {onAvatarUpload && (
+            <div className="rowline">
+              <strong>Photo</strong>
+              <div className="photo-actions">
+                {avatarUrl && onAvatarRemove && (
+                  <button
+                    type="button"
+                    className="btn-quiet"
+                    disabled={busy}
+                    onClick={() => run(onAvatarRemove)}
+                  >
+                    Remove
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn-quiet"
+                  disabled={busy}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  {busy ? "Saving…" : avatarUrl ? "Change" : "Upload"}
+                </button>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  hidden
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (file) void run(() => onAvatarUpload(file));
+                  }}
+                />
+              </div>
+            </div>
+          )}
+          {photoError && (
+            <p className="photo-error" role="alert">
+              {photoError}
+            </p>
+          )}
         </div>
 
         <div className="profile__block">

@@ -10,12 +10,16 @@ export interface SidebarChannel {
   unread?: boolean;
 }
 
+export type Presence = "online" | "connecting" | "offline";
+
 interface ChannelSidebarProps {
   workspaceName: string;
   channels: SidebarChannel[];
   activeId?: string;
   username: string;
-  connected: boolean;
+  avatarUrl?: string;
+  presence: Presence;
+  /** Shown when the presence pill is hovered, e.g. "Reconnecting…". */
   statusLabel: string;
   /** Bind Cmd/Ctrl+K to the channel filter. Off for the landing demo. */
   shortcut?: boolean;
@@ -30,7 +34,8 @@ export function ChannelSidebar({
   channels,
   activeId,
   username,
-  connected,
+  avatarUrl,
+  presence,
   statusLabel,
   shortcut = false,
   onSelect,
@@ -143,13 +148,15 @@ export function ChannelSidebar({
       </div>
 
       <div className="side__foot">
-        <Avatar name={username} tone={1} />
+        <span className="me-avatar" tabIndex={0}>
+          <Avatar name={username} tone={1} src={avatarUrl} />
+          <span className={`presence presence--${presence}`} role="status">
+            <span className="presence__dot" />
+            <span className="presence__label">{statusLabel}</span>
+          </span>
+        </span>
         <div className="side__me">
           <strong>{username}</strong>
-          <span className="status">
-            <span className={connected ? "dot" : "dot dot--wait"} />
-            {statusLabel}
-          </span>
         </div>
         <button
           type="button"

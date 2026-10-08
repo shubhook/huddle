@@ -7,6 +7,7 @@ export interface ChannelMessageEvent {
     channelId: string;
     senderId: string;
     senderUsername: string;
+    senderAvatarId: string | null;
     content: string;
     createdAt: Date;
 }
@@ -30,7 +31,7 @@ export async function sendChannelMessage(input: {
             senderId: input.userId,
             channelId: input.channelId,
         },
-        include: { sender: { select: { username: true } } },
+        include: { sender: { select: { username: true, avatarId: true } } },
     });
 
     const event: ChannelMessageEvent = {
@@ -38,6 +39,7 @@ export async function sendChannelMessage(input: {
         channelId: saved.channelId,
         senderId: saved.senderId,
         senderUsername: saved.sender.username,
+        senderAvatarId: saved.sender.avatarId,
         content: saved.content,
         createdAt: saved.createdAt,
     };
