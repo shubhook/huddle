@@ -6,10 +6,8 @@ import { Icon } from "@/components/ui/Icon";
 export interface SidebarChannel {
   id: string;
   name: string;
-  /** Last message, e.g. "maya: shipped". Empty while history is loading. */
-  preview?: string;
-  /** Time of the last message, already formatted. */
-  when?: string;
+  /** New messages arrived since the channel was last open. */
+  unread?: boolean;
 }
 
 interface ChannelSidebarProps {
@@ -123,12 +121,14 @@ export function ChannelSidebar({
             type="button"
             className={channel.id === activeId ? "chan is-active" : "chan"}
             aria-current={channel.id === activeId ? "true" : undefined}
+            aria-label={channel.unread ? `${channel.name}, new messages` : undefined}
             onClick={() => onSelect?.(channel.id)}
           >
-            <span className="chan__icon">#</span>
+            <span className="chan__icon">
+              #
+              {channel.unread && <span className="chan__dot" />}
+            </span>
             <span className="chan__name">{channel.name}</span>
-            <span className="chan__time">{channel.when}</span>
-            <span className="chan__preview">{channel.preview}</span>
           </button>
         ))}
         {query && visible.length === 0 && (

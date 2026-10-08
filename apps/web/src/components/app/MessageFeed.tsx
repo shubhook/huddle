@@ -124,22 +124,20 @@ function MessageRow({
 
   return (
     <div className={classes.join(" ")}>
-      <Avatar name={item.sender} tone={item.tone} />
-      <div>
-        {!grouped && (
-          <div className="msg__meta">
-            <span className="msg__name">{item.sender}</span>
-            <span className="msg__time">{clockTime(item.createdAt)}</span>
-            {item.delivery && (
-              <span className="msg__tick">
-                <Icon name={item.delivery === "delivered" ? "check" : "clock"} />
-                {DELIVERY_LABEL[item.delivery]}
-              </span>
-            )}
-          </div>
-        )}
-        <div className="msg__text">{item.body ?? <p>{item.text}</p>}</div>
-      </div>
+      {!grouped && (
+        <div className="msg__meta">
+          <Avatar name={item.sender} tone={item.tone} small />
+          <span className="msg__name">{item.sender}</span>
+          <span className="msg__time">{clockTime(item.createdAt)}</span>
+          {item.delivery && (
+            <span className="msg__tick">
+              <Icon name={item.delivery === "delivered" ? "check" : "clock"} />
+              {DELIVERY_LABEL[item.delivery]}
+            </span>
+          )}
+        </div>
+      )}
+      <div className="msg__text">{item.body ?? <p>{item.text}</p>}</div>
     </div>
   );
 }

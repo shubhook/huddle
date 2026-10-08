@@ -45,17 +45,3 @@ export function dayLabel(iso: string): string {
     day: "numeric",
   });
 }
-
-/** Compact time for the channel list: "2:41 PM", "Yesterday", "Mon", "Oct 3". */
-export function shortWhen(iso: string): string {
-  const days = daysAgo(iso);
-  if (days === 0) return clockTime(iso);
-  if (days === 1) return "Yesterday";
-  if (days < 7) {
-    return new Date(iso).toLocaleDateString("en-US", { weekday: "short" });
-  }
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}

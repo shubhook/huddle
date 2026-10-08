@@ -2,12 +2,11 @@ import { useEffect, useRef, useState } from "react";
 
 import { Avatar } from "@/components/app/Avatar";
 import { ChannelHeader } from "@/components/app/ChannelHeader";
-import { ChannelSidebar, type SidebarChannel } from "@/components/app/ChannelSidebar";
+import { ChannelSidebar } from "@/components/app/ChannelSidebar";
 import { ChatLayout } from "@/components/app/ChatLayout";
 import { Composer } from "@/components/app/Composer";
 import { InviteDialog, NewChannelDialog } from "@/components/app/Dialogs";
 import { EmptyChannel } from "@/components/app/EmptyChannel";
-import { shortWhen } from "@/components/app/format";
 import { MessageFeed, type FeedItem } from "@/components/app/MessageFeed";
 import { ProfileView } from "@/components/app/ProfileView";
 import { useTheme } from "@/components/app/useTheme";
@@ -177,24 +176,12 @@ function seedChannels(): DemoChannel[] {
   ];
 }
 
-function toSidebar(channel: DemoChannel): SidebarChannel {
-  const last = channel.items.findLast((item) => item.kind === "message");
-  if (!last || last.kind !== "message") {
-    return { id: channel.id, name: channel.name, preview: "No messages yet", when: "—" };
-  }
-  const who = last.sender === ME ? "you" : last.sender;
-  return {
-    id: channel.id,
-    name: channel.name,
-    preview: `${who}: ${last.text}`,
-    when: shortWhen(last.createdAt),
-  };
-}
-
 export function LiveDemo() {
   const [theme, setTheme] = useTheme(false);
   const [channels, setChannels] = useState(seedChannels);
   const [activeId, setActiveId] = useState("general");
+  // Seeded so the landing page shows what an unread channel looks like.
+  const [unread, setUnread] = useState<ReadonlySet<string>>(new Set(["shipping"]));
   const [view, setView] = useState<"chat" | "profile">("chat");
   const [dialog, setDialog] = useState<"channel" | "invite" | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -244,6 +231,7 @@ export function LiveDemo() {
 
   const select = (id: string) => {
     setActiveId(id);
+    setUnread((current) => new Set([...current].filter((channelId) => channelId !== id)));
     setView("chat");
     setDrawerOpen(false);
   };
@@ -262,7 +250,11 @@ export function LiveDemo() {
       sidebar={
         <ChannelSidebar
           workspaceName="Studio"
-          channels={channels.map(toSidebar)}
+          channels={channels.map((channel) => ({
+            id: channel.id,
+            name: channel.name,
+            unread: unread.has(channel.id),
+          }))}
           activeId={view === "chat" ? active.id : undefined}
           username={ME}
           connected
