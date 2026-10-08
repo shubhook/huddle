@@ -113,7 +113,7 @@ export async function getMessages(req: Request, res: Response) {
                 where: { channelId: channelId },
                 take: 50,
                 orderBy: { createdAt: "desc" },
-                include: { sender: { select: { username: true } } }
+                include: { sender: { select: { username: true, avatarId: true } } }
             });
         }
         else {
@@ -123,7 +123,7 @@ export async function getMessages(req: Request, res: Response) {
                 skip: 1,
                 cursor: { id: cursor },
                 orderBy: { createdAt: "desc" },
-                include: { sender: { select: { username: true } } }
+                include: { sender: { select: { username: true, avatarId: true } } }
             });
         }
 

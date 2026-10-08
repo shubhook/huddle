@@ -9,6 +9,7 @@ export interface NewMessageEvent {
   channelId: string;
   senderId: string;
   senderUsername: string;
+  senderAvatarId: string | null;
   content: string;
   createdAt: string;
 }

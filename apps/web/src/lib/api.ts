@@ -144,6 +144,8 @@ export async function sendMessage(channelId: string, content: string) {
     id: string;
     username: string;
     email: string;
+    /** Changes on each upload. Null when the user has no picture. */
+    avatarId: string | null;
 }
 
 export async function getCurrentUser(): Promise<CurrentUser> {
@@ -161,7 +163,7 @@ export interface ChannelMessage {
     senderId: string;
     channelId: string;
     createdAt: string;
-    sender: { username: string };
+    sender: { username: string; avatarId: string | null };
 }
 
 export async function getMessages(channelId: string): Promise<ChannelMessage[]> {
@@ -179,3 +181,21 @@ export async function getWorkspace(workspaceId: string): Promise<WorkspaceDetail
     );
     return res.data.workspaceDetails;
   }
+
+/** Where a user's picture is served. The avatar id makes the URL change on every upload. */
+export function avatarUrl(userId: string, avatarId: string | null | undefined): string | undefined {
+    if (!avatarId) return undefined;
+    return `${API_URL}/users/${userId}/avatar?v=${encodeURIComponent(avatarId)}`;
+}
+
+export async function uploadAvatar(image: Blob): Promise<{ avatarId: string }> {
+    const res = await axios.put(`${API_URL}/users/me/avatar`, image, {
+        withCredentials: true,
+        headers: { "Content-Type": image.type },
+    });
+    return res.data;
+}
+
+export async function removeAvatar(): Promise<void> {
+    await axios.delete(`${API_URL}/users/me/avatar`, { withCredentials: true });
+}

@@ -19,6 +19,8 @@ model User {
   hashedPassword         String?
   /// GitHub's numeric user id. Sign-in with GitHub matches on this, never on email alone.
   githubId               String?         @unique
+  /// Changes on every upload, so it doubles as the cache key in avatar URLs. Null means no picture.
+  avatarId               String?
   createdAt              DateTime        @default(now())
 
   workspaces             WorkspaceMember[]
@@ -27,6 +29,17 @@ model User {
   sentDirectMessages     DirectMessage[] @relation("SentDMs")
   receivedDirectMessages DirectMessage[] @relation("ReceivedDMs")
   sessions               Session[]
+  avatar                 UserAvatar?
+}
+
+/// The picture bytes live apart from User so that loading a user never drags them along.
+/// Always a 128x128 WebP, a few KB, re-encoded on the server whatever was uploaded.
+model UserAvatar {
+  userId    String   @id
+  data      Bytes
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 /// One row per login. The JWT carries this id as `sid`, and every request checks

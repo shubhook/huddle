@@ -10,6 +10,23 @@
   50% { opacity: 0.35; }
 }
 
+@keyframes app-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skel__bone,
+  .presence__dot {
+    animation: none !important;
+  }
+
+  .presence,
+  .presence__label {
+    transition: none;
+  }
+}
+
 .app-frame {
   container-type: inline-size;
   height: 100dvh;
@@ -134,6 +151,13 @@
     font-size: 12px;
     font-weight: 600;
     color: #fff;
+  }
+
+  .avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    object-fit: cover;
   }
 
   .avatar--sm {
@@ -378,26 +402,82 @@
     color: var(--strong);
   }
 
-  .status {
+  /* Connection status: a dot on the avatar that opens into a labelled pill on hover */
+  .me-avatar {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+    border-radius: 10px;
+    outline: none;
+  }
+
+  .me-avatar:focus-visible {
+    box-shadow: 0 0 0 2px var(--panel-2), 0 0 0 4px var(--wash-line);
+  }
+
+  .presence {
+    position: absolute;
+    left: 20px;
+    bottom: -4px;
+    z-index: 1;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: var(--panel-muted);
+    padding: 3px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    white-space: nowrap;
+    pointer-events: none;
+    transition:
+      padding 0.18s ease,
+      background-color 0.18s ease,
+      box-shadow 0.18s ease;
   }
 
-  .dot {
-    width: 7px;
-    height: 7px;
+  .presence__dot {
+    flex: none;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     background: var(--success);
-    box-shadow: 0 0 0 3px #30a24b26;
   }
 
-  .dot--wait {
+  .presence--connecting .presence__dot {
     background: var(--warn);
-    box-shadow: 0 0 0 3px #e0a02826;
     animation: app-pulse 1.2s ease-in-out infinite;
+  }
+
+  .presence--offline .presence__dot {
+    background: var(--danger);
+  }
+
+  .presence__label {
+    max-width: 0;
+    overflow: hidden;
+    opacity: 0;
+    font-size: 11.5px;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--strong);
+    transition:
+      max-width 0.2s ease,
+      margin 0.2s ease,
+      opacity 0.15s ease;
+  }
+
+  .me-avatar:hover .presence,
+  .me-avatar:focus-visible .presence {
+    padding: 4px 9px 4px 5px;
+    background: var(--panel-4);
+    box-shadow:
+      inset 0 0 0 1px var(--panel-line-2),
+      0 6px 16px rgb(0 0 0 / 0.28);
+  }
+
+  .me-avatar:hover .presence__label,
+  .me-avatar:focus-visible .presence__label {
+    max-width: 120px;
+    margin-left: 6px;
+    opacity: 1;
   }
 
   /* Main column */
@@ -783,6 +863,51 @@
     color: var(--panel-muted);
   }
 
+  /* Placeholder rows while a channel's history loads */
+  .skel {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    padding-top: 28px;
+  }
+
+  .skel__row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .skel__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .skel__bone {
+    display: block;
+    height: 10px;
+    border-radius: 6px;
+    background: linear-gradient(
+      90deg,
+      var(--panel-3) 0%,
+      var(--panel-4) 50%,
+      var(--panel-3) 100%
+    );
+    background-size: 200% 100%;
+    animation: app-shimmer 1.4s ease-in-out infinite;
+  }
+
+  .skel__bone--avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+  }
+
+  .skel__bone--line {
+    height: 12px;
+    margin-left: 30px;
+  }
+
   .loading {
     padding: 72px 24px;
     text-align: center;
@@ -964,6 +1089,36 @@
     background: var(--panel-2);
     color: var(--strong);
     box-shadow: inset 0 0 0 1px var(--panel-line-2);
+  }
+
+  .photo-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-quiet {
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 9px;
+    border: 1px solid var(--panel-line-2);
+    background: var(--panel-3);
+    color: var(--strong);
+    font-size: 13.5px;
+    font-weight: 500;
+  }
+
+  .btn-quiet:hover:not(:disabled) {
+    background: var(--panel-4);
+  }
+
+  .btn-quiet:disabled {
+    opacity: 0.6;
+  }
+
+  .photo-error {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: var(--danger);
   }
 
   .linkish {

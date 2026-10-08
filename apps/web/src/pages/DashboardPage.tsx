@@ -1,25 +1,33 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ChannelHeader } from "@/components/app/ChannelHeader";
-import { ChannelSidebar, type SidebarChannel } from "@/components/app/ChannelSidebar";
+import {
+  ChannelSidebar,
+  type Presence,
+  type SidebarChannel,
+} from "@/components/app/ChannelSidebar";
 import { ChatLayout } from "@/components/app/ChatLayout";
 import { Composer, MAX_MESSAGE_LENGTH } from "@/components/app/Composer";
 import { InviteDialog, NewChannelDialog } from "@/components/app/Dialogs";
 import { EmptyChannel } from "@/components/app/EmptyChannel";
-import { MessageFeed, type FeedItem } from "@/components/app/MessageFeed";
+import { MessageFeed, MessageSkeleton, type FeedItem } from "@/components/app/MessageFeed";
 import { ProfileView } from "@/components/app/ProfileView";
 import { useTheme } from "@/components/app/useTheme";
 import { WorkspaceRail } from "@/components/app/WorkspaceRail";
 import { Icon } from "@/components/ui/Icon";
 import {
+  avatarUrl,
   createChannel,
   createInvite,
   type CurrentUser,
   getApiErrorMessage,
   getMessages,
   getWorkspace,
+  removeAvatar,
+  uploadAvatar,
   type WorkspaceSummary,
 } from "@/lib/api";
+import { shrinkForAvatar } from "@/lib/image";
 import {
   connectSocket,
   disconnectSocket,
@@ -52,6 +60,8 @@ interface DashboardPageProps {
   workspaceId: string;
   onSelectWorkspace: (workspaceId: string) => void;
   onCreateWorkspace: () => void;
+  /** The signed-in user's picture changed. Null when it was removed. */
+  onAvatarChange: (avatarId: string | null) => void;
   onLogout: () => void;
 }
 
@@ -76,6 +86,7 @@ export function DashboardPage({
   workspaceId,
   onSelectWorkspace,
   onCreateWorkspace,
+  onAvatarChange,
   onLogout,
 }: DashboardPageProps) {
   const [theme, setTheme] = useTheme();
@@ -131,6 +142,8 @@ export function DashboardPage({
       const loaded = batch.map((message) => ({
         id: message.id,
         sender: message.sender.username,
+        senderId: message.senderId,
+        senderAvatarId: message.sender.avatarId,
         channel: message.channelId,
         createdAt: message.createdAt,
         content: message.content,
@@ -212,6 +225,8 @@ export function DashboardPage({
               {
                 id: payload.id,
                 sender: payload.senderUsername,
+                senderId: payload.senderId,
+                senderAvatarId: payload.senderAvatarId,
                 channel: payload.channelId,
                 createdAt: payload.createdAt,
                 content: payload.content,
@@ -249,6 +264,8 @@ export function DashboardPage({
                 {
                   id: message.messageId,
                   sender: user.username,
+                  senderId: user.id,
+                  senderAvatarId: null,
                   channel: send.channelId,
                   createdAt: send.createdAt,
                   content: send.content,
@@ -320,6 +337,16 @@ export function DashboardPage({
     [channels, unread],
   );
 
+  const myAvatarUrl = avatarUrl(user.id, user.avatarId);
+
+  // Each message carries the sender's picture as it was when fetched. The newest one
+  // wins, so a changed picture shows on all of that person's messages.
+  const avatarBySender = useMemo(() => {
+    const latest = new Map<string, string | null>();
+    for (const message of messages) latest.set(message.senderId, message.senderAvatarId);
+    return latest;
+  }, [messages]);
+
   const feedItems: FeedItem[] = useMemo(() => {
     if (!activeChannel) return [];
     const saved: FeedItem[] = messages
@@ -331,6 +358,10 @@ export function DashboardPage({
         createdAt: message.createdAt,
         text: message.content,
         tone: message.sender === user.username ? 1 : undefined,
+        avatarUrl:
+          message.senderId === user.id
+            ? myAvatarUrl
+            : avatarUrl(message.senderId, avatarBySender.get(message.senderId)),
         delivery: delivered.has(message.id) ? "delivered" : undefined,
       }));
     const unsaved: FeedItem[] = pending
@@ -342,10 +373,35 @@ export function DashboardPage({
         createdAt: send.createdAt,
         text: send.content,
         tone: 1,
+        avatarUrl: myAvatarUrl,
         delivery: send.failed ? "failed" : "sending",
       }));
     return [...saved, ...unsaved];
-  }, [activeChannel, messages, pending, delivered, user.username]);
+  }, [activeChannel, messages, pending, delivered, user.id, user.username, myAvatarUrl, avatarBySender]);
+
+  async function handleAvatarUpload(file: File) {
+    let image: Blob;
+    try {
+      image = await shrinkForAvatar(file);
+    } catch {
+      throw new Error("That file could not be opened as an image.");
+    }
+    try {
+      const { avatarId } = await uploadAvatar(image);
+      onAvatarChange(avatarId);
+    } catch (error) {
+      throw new Error(getApiErrorMessage(error, "Could not upload your photo."));
+    }
+  }
+
+  async function handleAvatarRemove() {
+    try {
+      await removeAvatar();
+      onAvatarChange(null);
+    } catch (error) {
+      throw new Error(getApiErrorMessage(error, "Could not remove your photo."));
+    }
+  }
 
   /** Returns false when nothing was sent, so the composer keeps the draft. */
   function handleSend(content: string): boolean {
@@ -423,6 +479,11 @@ export function DashboardPage({
   }
 
   const connected = status === "connected";
+  const presence: Presence = connected
+    ? "online"
+    : status === "connecting"
+      ? "connecting"
+      : "offline";
   const statusLabel = connected
     ? "Connected"
     : status === "connecting"
@@ -461,7 +522,8 @@ export function DashboardPage({
           channels={sidebarChannels}
           activeId={view === "chat" ? activeChannel?.id : undefined}
           username={user.username}
-          connected={connected}
+          avatarUrl={myAvatarUrl}
+          presence={presence}
           statusLabel={statusLabel}
           shortcut
           onSelect={(id) => {
@@ -501,6 +563,9 @@ export function DashboardPage({
           <ProfileView
             username={user.username}
             email={user.email}
+            avatarUrl={myAvatarUrl}
+            onAvatarUpload={handleAvatarUpload}
+            onAvatarRemove={handleAvatarRemove}
             theme={theme}
             onThemeChange={setTheme}
             workspaceName={workspaceName}
@@ -534,10 +599,8 @@ export function DashboardPage({
             </div>
           )}
 
-          {activeChannel && !loadedChannels.has(activeChannel.id) ? (
-            <div className="feed">
-              <p className="loading">Loading #{channelName}…</p>
-            </div>
+          {!workspaceName || (activeChannel && !loadedChannels.has(activeChannel.id)) ? (
+            <MessageSkeleton label={channelName ? `Loading #${channelName}` : "Loading"} />
           ) : (
             <MessageFeed
               items={feedItems}
@@ -551,7 +614,7 @@ export function DashboardPage({
                     onNewChannel={() => openDialog("channel")}
                   />
                 ) : (
-                  <p className="loading">{workspaceName ? "No channels yet." : "Loading…"}</p>
+                  <p className="loading">No channels yet.</p>
                 )
               }
             />
