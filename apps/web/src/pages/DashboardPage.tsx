@@ -573,7 +573,10 @@ export function DashboardPage({
         : "Connecting…"
       : "Offline";
   const role = workspaces.find((workspace) => workspace.id === workspaceId)?.role;
-  const canDeleteChannels = role === "owner" || role === "admin";
+  // Admins manage channels; invites stay with owners. Both mirror the server.
+  const canManageChannels = role === "owner" || role === "admin";
+  const onInvite = role === "owner" ? () => openDialog("invite") : undefined;
+  const onNewChannel = canManageChannels ? () => openDialog("channel") : undefined;
   const channelName = activeChannel?.name ?? "";
 
   return (
@@ -616,8 +619,8 @@ export function DashboardPage({
             setView("chat");
             setDrawerOpen(false);
           }}
-          onInvite={() => openDialog("invite")}
-          onNewChannel={() => openDialog("channel")}
+          onInvite={onInvite}
+          onNewChannel={onNewChannel}
           onProfile={() => {
             setView("profile");
             setDrawerOpen(false);
@@ -632,7 +635,7 @@ export function DashboardPage({
             error={detailsError}
             userId={user.id}
             myAvatarUrl={myAvatarUrl}
-            canDelete={canDeleteChannels}
+            canDelete={canManageChannels}
             onDelete={() => {
               if (!activeChannel) return;
               setDialogError(undefined);
@@ -733,9 +736,9 @@ export function DashboardPage({
                 activeChannel ? (
                   <EmptyChannel
                     channelName={channelName}
-                    onInvite={() => openDialog("invite")}
+                    onInvite={onInvite}
                     onSayHello={() => composerRef.current?.focus()}
-                    onNewChannel={() => openDialog("channel")}
+                    onNewChannel={onNewChannel}
                   />
                 ) : (
                   <p className="loading">No channels yet.</p>

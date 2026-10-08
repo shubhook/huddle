@@ -44,7 +44,7 @@ Signup body: `{ username, email, password }`. Sign-in body: `{ email, password }
 
 | Method | Path | Notes |
 | --- | --- | --- |
-| POST | `/workspaces/:id/channels` | `{ name }`. All current members are added |
+| POST | `/workspaces/:id/channels` | Owner or admin. `{ name }`. All current members are added |
 | GET | `/workspaces/:id/channels` | |
 | GET | `/channels/:id` | Name, `createdAt`, members with their workspace role |
 | DELETE | `/channels/:id` | Owner or admin. Removes the channel and its messages, then sends `channel_deleted` to every member |

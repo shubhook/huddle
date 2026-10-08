@@ -24,7 +24,9 @@ interface ChannelSidebarProps {
   /** Bind Cmd/Ctrl+K to the channel filter. Off for the landing demo. */
   shortcut?: boolean;
   onSelect?: (channelId: string) => void;
+  /** Omit to hide the invite button, e.g. for members who are not owners. */
   onInvite?: () => void;
+  /** Omit to hide the new channel buttons. */
   onNewChannel?: () => void;
   onProfile?: () => void;
 }
@@ -67,24 +69,28 @@ export function ChannelSidebar({
     <aside className="side">
       <div className="side__head">
         <h2 className="side__ws">{workspaceName}</h2>
-        <button
-          type="button"
-          className="icon-btn"
-          title="Invite people"
-          aria-label="Invite people"
-          onClick={onInvite}
-        >
-          <Icon name="userPlus" />
-        </button>
-        <button
-          type="button"
-          className="icon-btn icon-btn--boxed"
-          title="New channel"
-          aria-label="New channel"
-          onClick={onNewChannel}
-        >
-          <Icon name="edit" />
-        </button>
+        {onInvite && (
+          <button
+            type="button"
+            className="icon-btn"
+            title="Invite people"
+            aria-label="Invite people"
+            onClick={onInvite}
+          >
+            <Icon name="userPlus" />
+          </button>
+        )}
+        {onNewChannel && (
+          <button
+            type="button"
+            className="icon-btn icon-btn--boxed"
+            title="New channel"
+            aria-label="New channel"
+            onClick={onNewChannel}
+          >
+            <Icon name="edit" />
+          </button>
+        )}
       </div>
 
       <label className="search">
@@ -110,14 +116,16 @@ export function ChannelSidebar({
       <div className="side__scroll">
         <div className="side__label">
           Channels
-          <button
-            type="button"
-            title="New channel"
-            aria-label="New channel"
-            onClick={onNewChannel}
-          >
-            +
-          </button>
+          {onNewChannel && (
+            <button
+              type="button"
+              title="New channel"
+              aria-label="New channel"
+              onClick={onNewChannel}
+            >
+              +
+            </button>
+          )}
         </div>
 
         {visible.map((channel) => (
