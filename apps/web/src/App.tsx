@@ -94,6 +94,14 @@ export function App() {
     }
   }, [needsSession, sessionChecked, currentUser]);
 
+  // A signed-in user has no use for the landing page. /auth/me only succeeds
+  // with an unexpired token on a live session, so currentUser is the signal.
+  useEffect(() => {
+    if (route === "/" && currentUser) {
+      navigateTo("/app", { replace: true });
+    }
+  }, [route, currentUser]);
+
   // The URL carries the workspace id (#/app/<id>) so a refresh keeps it. When it
   // is missing or not one of the user's workspaces, fall back to their first
   // one, or to workspace creation if they have none.
@@ -217,6 +225,10 @@ export function App() {
       />
     );
   }
+
+  // Hold the landing page until the session check settles so signed-in users
+  // don't see it flash before the redirect above.
+  if (!sessionChecked || currentUser) return null;
 
   return (
     <LandingPage
