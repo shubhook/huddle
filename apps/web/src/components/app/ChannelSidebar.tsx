@@ -8,6 +8,8 @@ export interface SidebarChannel {
   name: string;
   /** New messages arrived since the channel was last open. */
   unread?: boolean;
+  /** Shown before the server has finished creating it. */
+  pending?: boolean;
 }
 
 export type Presence = "online" | "connecting" | "offline";
@@ -132,9 +134,21 @@ export function ChannelSidebar({
           <button
             key={channel.id}
             type="button"
-            className={channel.id === activeId ? "chan is-active" : "chan"}
+            className={[
+              "chan",
+              channel.id === activeId && "is-active",
+              channel.pending && "is-pending",
+            ]
+              .filter(Boolean)
+              .join(" ")}
             aria-current={channel.id === activeId ? "true" : undefined}
-            aria-label={channel.unread ? `${channel.name}, new messages` : undefined}
+            aria-label={
+              channel.pending
+                ? `${channel.name}, being created`
+                : channel.unread
+                  ? `${channel.name}, new messages`
+                  : undefined
+            }
             onClick={() => onSelect?.(channel.id)}
           >
             <span className="chan__icon">

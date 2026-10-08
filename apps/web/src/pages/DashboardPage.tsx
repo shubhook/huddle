@@ -31,6 +31,7 @@ import {
   uploadAvatar,
   type WorkspaceSummary,
 } from "@/lib/api";
+import { cachedWorkspace, cacheWorkspace } from "@/lib/cache";
 import { shrinkForAvatar } from "@/lib/image";
 import {
   connectSocket,
@@ -72,6 +73,12 @@ interface DashboardPageProps {
 /** How long to wait for the server's ack before marking a send unconfirmed. */
 const SEND_CONFIRM_TIMEOUT_MS = 10_000;
 const NOTICE_VISIBLE_MS = 6_000;
+/** Quiet time before the workspace is written to the local cache. */
+const CACHE_WRITE_DELAY_MS = 500;
+
+/** Prefix for a channel shown before the server has created it. */
+const PENDING_CHANNEL_PREFIX = "pending:";
+const isPendingChannel = (channelId: string) => channelId.startsWith(PENDING_CHANNEL_PREFIX);
 
 /**
  * History (REST) and live messages (socket) reach the page by different routes
@@ -94,6 +101,8 @@ export function DashboardPage({
   onLogout,
 }: DashboardPageProps) {
   const [theme, setTheme] = useTheme();
+  /** The workspace the state below belongs to. Lags the prop for one render on a switch. */
+  const [stateWorkspaceId, setStateWorkspaceId] = useState<string | null>(null);
   const [workspaceName, setWorkspaceName] = useState("");
   const [memberCount, setMemberCount] = useState<number | null>(null);
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -187,30 +196,42 @@ export function DashboardPage({
     setDeleteTarget((current) => (current?.id === channelId ? null : current));
   }, []);
 
-  // A new workspace starts from a clean slate. History for every channel is
-  // fetched up front so switching channels is instant.
+  // A new workspace starts from what this browser last saw of it, or from a
+  // clean slate. Either way the server's copy replaces it. History for every
+  // channel is fetched up front so switching channels is instant.
   useEffect(() => {
     if (!workspaceId) return;
     let cancelled = false;
 
-    setChannels([]);
-    setMessages([]);
-    setLoadedChannels(new Set());
+    const snapshot = cachedWorkspace(workspaceId);
+    setStateWorkspaceId(workspaceId);
+    setChannels(snapshot?.channels ?? []);
+    setMessages(snapshot?.messages ?? []);
+    setLoadedChannels(new Set(snapshot?.channels.map((channel) => channel.id)));
     setUnread(new Set());
-    setActiveChannelId(null);
-    setWorkspaceName("");
-    setMemberCount(null);
+    setActiveChannelId(snapshot?.activeChannelId ?? null);
+    setWorkspaceName(snapshot?.name ?? "");
+    setMemberCount(snapshot?.memberCount ?? null);
     setView("chat");
-    knownSenders.current = new Set([user.username]);
+    knownSenders.current = new Set([
+      user.username,
+      ...(snapshot?.messages.map((message) => message.sender) ?? []),
+    ]);
 
     getWorkspace(workspaceId)
       .then((workspace) => {
         if (cancelled) return;
+        const fresh = workspace.channels.map(({ id, name }) => ({ id, name }));
         setWorkspaceName(workspace.general.name);
         setMemberCount(workspace.members.length);
-        setChannels(workspace.channels);
-        setActiveChannelId(workspace.channels[0]?.id ?? null);
-        workspace.channels.forEach((channel) => void loadHistory(channel.id));
+        setChannels(fresh);
+        // Keep the channel the user is on, unless it no longer exists.
+        setActiveChannelId((current) =>
+          current && fresh.some((channel) => channel.id === current)
+            ? current
+            : (fresh[0]?.id ?? null),
+        );
+        fresh.forEach((channel) => void loadHistory(channel.id));
       })
       .catch(() => {
         if (!cancelled) setNotice("Could not load this workspace.");
@@ -220,6 +241,23 @@ export function DashboardPage({
       cancelled = true;
     };
   }, [workspaceId, loadHistory, user.username]);
+
+  // Remember the workspace for the next visit. Pending sends and channels the
+  // server has not created yet are left out.
+  useEffect(() => {
+    if (!stateWorkspaceId || !workspaceName) return;
+    const timer = setTimeout(() => {
+      cacheWorkspace(stateWorkspaceId, {
+        name: workspaceName,
+        memberCount,
+        channels: channels.filter((channel) => !isPendingChannel(channel.id)),
+        activeChannelId:
+          activeChannelId && !isPendingChannel(activeChannelId) ? activeChannelId : null,
+        messages,
+      });
+    }, CACHE_WRITE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [stateWorkspaceId, workspaceName, memberCount, channels, activeChannelId, messages]);
 
   useEffect(() => {
     connectSocket();
@@ -367,14 +405,18 @@ export function DashboardPage({
   }, [viewingId]);
 
   useEffect(() => {
-    if (status !== "connected" || !activeChannel) return;
+    if (status !== "connected" || !activeChannel || isPendingChannel(activeChannel.id)) return;
     joinChannel(activeChannel.id, workspaceId);
     return () => {
       leaveChannel(activeChannel.id);
     };
   }, [activeChannel?.id, workspaceId, status]);
 
-  const detailsChannelId = detailsOpen && view === "chat" ? activeChannel?.id : undefined;
+  // A channel still being created has no details to fetch, and nothing to delete.
+  const detailsChannelId =
+    detailsOpen && view === "chat" && activeChannel && !isPendingChannel(activeChannel.id)
+      ? activeChannel.id
+      : undefined;
 
   useEffect(() => {
     if (!detailsChannelId) return;
@@ -398,7 +440,12 @@ export function DashboardPage({
   }, [detailsChannelId]);
 
   const sidebarChannels: SidebarChannel[] = useMemo(
-    () => channels.map((channel) => ({ ...channel, unread: unread.has(channel.id) })),
+    () =>
+      channels.map((channel) => ({
+        ...channel,
+        unread: unread.has(channel.id),
+        pending: isPendingChannel(channel.id),
+      })),
     [channels, unread],
   );
 
@@ -472,6 +519,11 @@ export function DashboardPage({
   function handleSend(content: string): boolean {
     if (!activeChannel) return false;
 
+    if (isPendingChannel(activeChannel.id)) {
+      setNotice(`#${activeChannel.name} is still being created. Try again in a moment.`);
+      return false;
+    }
+
     if (content.length > MAX_MESSAGE_LENGTH) {
       setNotice(
         `Messages are limited to ${MAX_MESSAGE_LENGTH} characters. This one has ${content.length}.`,
@@ -510,23 +562,47 @@ export function DashboardPage({
     return true;
   }
 
-  async function handleCreateChannel(name: string): Promise<boolean> {
-    try {
-      const channel = await createChannel(workspaceId, name);
-      // The creator is added as a member server-side, so it is safe to open now.
-      setChannels((current) =>
-        current.some((existing) => existing.id === channel.id)
-          ? current
-          : [...current, { id: channel.id, name: channel.name }],
-      );
-      setLoadedChannels((current) => new Set(current).add(channel.id));
-      setActiveChannelId(channel.id);
-      setView("chat");
-      return true;
-    } catch (error) {
-      setDialogError(getApiErrorMessage(error, "Could not create channel."));
+  /**
+   * Shows the channel and opens it straight away, then asks the server to
+   * create it. The placeholder is swapped for the real channel when it
+   * answers, or removed again if it refuses.
+   */
+  function handleCreateChannel(name: string): boolean {
+    if (channels.some((channel) => channel.name === name)) {
+      setDialogError(`#${name} already exists in this workspace.`);
       return false;
     }
+
+    const placeholderId = `${PENDING_CHANNEL_PREFIX}${Date.now()}`;
+    const previousChannelId = activeChannel?.id ?? null;
+    setChannels((current) => [...current, { id: placeholderId, name }]);
+    setLoadedChannels((current) => new Set(current).add(placeholderId));
+    setActiveChannelId(placeholderId);
+    setView("chat");
+
+    createChannel(workspaceId, name)
+      .then((channel) => {
+        // The creator is added as a member server-side, so it is safe to open now.
+        setChannels((current) =>
+          current.some((existing) => existing.id === channel.id)
+            ? current.filter((existing) => existing.id !== placeholderId)
+            : current.map((existing) =>
+                existing.id === placeholderId
+                  ? { id: channel.id, name: channel.name }
+                  : existing,
+              ),
+        );
+        setLoadedChannels((current) => new Set(current).add(channel.id));
+        setActiveChannelId((current) => (current === placeholderId ? channel.id : current));
+      })
+      .catch((error) => {
+        setChannels((current) => current.filter((channel) => channel.id !== placeholderId));
+        setActiveChannelId((current) =>
+          current === placeholderId ? previousChannelId : current,
+        );
+        setNotice(getApiErrorMessage(error, "Could not create channel."));
+      });
+    return true;
   }
 
   async function handleDeleteChannel(): Promise<boolean> {
