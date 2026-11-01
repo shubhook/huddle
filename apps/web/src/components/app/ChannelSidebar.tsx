@@ -82,17 +82,6 @@ export function ChannelSidebar({
             <Icon name="userPlus" />
           </button>
         )}
-        {onNewChannel && (
-          <button
-            type="button"
-            className="icon-btn icon-btn--boxed"
-            title="New channel"
-            aria-label="New channel"
-            onClick={onNewChannel}
-          >
-            <Icon name="edit" />
-          </button>
-        )}
       </div>
 
       <label className="search">
@@ -121,11 +110,12 @@ export function ChannelSidebar({
           {onNewChannel && (
             <button
               type="button"
+              className="icon-btn icon-btn--sm"
               title="New channel"
               aria-label="New channel"
               onClick={onNewChannel}
             >
-              +
+              <Icon name="plus" />
             </button>
           )}
         </div>
@@ -138,6 +128,7 @@ export function ChannelSidebar({
               "chan",
               channel.id === activeId && "is-active",
               channel.pending && "is-pending",
+              channel.unread && channel.id !== activeId && "is-unread",
             ]
               .filter(Boolean)
               .join(" ")}
@@ -151,11 +142,11 @@ export function ChannelSidebar({
             }
             onClick={() => onSelect?.(channel.id)}
           >
-            <span className="chan__icon">
+            <span className="chan__icon" aria-hidden>
               #
-              {channel.unread && <span className="chan__dot" />}
             </span>
             <span className="chan__name">{channel.name}</span>
+            {channel.unread && channel.id !== activeId && <span className="chan__dot" />}
           </button>
         ))}
         {query && visible.length === 0 && (
@@ -163,10 +154,7 @@ export function ChannelSidebar({
         )}
 
         <div className="side__label">Direct messages</div>
-        <div className="soon">
-          Direct messages are coming. The API is there; the socket and UI are
-          not yet.
-        </div>
+        <p className="soon">Coming soon</p>
       </div>
 
       <div className="side__foot">
