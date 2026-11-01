@@ -116,7 +116,7 @@ export function InviteDialog({ workspaceName, url, error, onClose }: InviteDialo
       {error ? (
         <p className="modal__error" role="alert">{error}</p>
       ) : (
-        <p className="modal__hint">Expires in 7 days.</p>
+        <p className="modal__hint">Expires in 7 days</p>
       )}
       <div className="modal__actions">
         <button type="button" className="btn btn--primary btn--sm" onClick={onClose}>

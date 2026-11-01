@@ -62,7 +62,7 @@ export function ChannelDetails({
 
         <div className="side__label">
           Members
-          {details && <span>{details.members.length}</span>}
+          {details && <span className="side__count">{details.members.length}</span>}
         </div>
 
         {error ? (

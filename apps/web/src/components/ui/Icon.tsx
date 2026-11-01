@@ -2,6 +2,7 @@
 // (GitHub), so the app keeps its own small set for visual consistency.
 const paths = {
   check: <path d="M20 6 9 17l-5-5" />,
+  chevron: <path d="m9 6 6 6-6 6" />,
   github: (
     <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.9a3.4 3.4 0 0 0-.9-2.6c3.1-.4 6.4-1.5 6.4-7a5.4 5.4 0 0 0-1.5-3.8 5 5 0 0 0-.1-3.8s-1.2-.4-3.9 1.5a13.4 13.4 0 0 0-7 0C6.3 1.5 5.1 1.9 5.1 1.9A5 5 0 0 0 5 5.7a5.4 5.4 0 0 0-1.5 3.8c0 5.4 3.3 6.6 6.4 7a3.4 3.4 0 0 0-.9 2.6V22" />
   ),
